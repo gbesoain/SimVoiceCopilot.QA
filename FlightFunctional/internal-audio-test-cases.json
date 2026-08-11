@@ -1,0 +1,570 @@
+{
+  "schemaVersion": 2,
+  "description": "Unattended internal-audio end-to-end tests. SimVoice synthesizes PCM in memory, feeds the normal Vosk pipeline, and the independent SimConnect Oracle validates the real MSFS result.",
+  "suites": {
+    "SmokeInternalEN": [
+      {
+        "id": "HDG-EN-SMOKE",
+        "language": "en-US",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set heading bug to two one zero",
+            "expected": "210"
+          },
+          {
+            "phrase": "Set heading bug to one one zero",
+            "expected": "110"
+          }
+        ]
+      },
+      {
+        "id": "ALT-EN-SMOKE",
+        "language": "en-US",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 40,
+        "variants": [
+          {
+            "phrase": "Set altitude to eight thousand",
+            "expected": "8000"
+          },
+          {
+            "phrase": "Set altitude to five thousand",
+            "expected": "5000"
+          }
+        ]
+      },
+      {
+        "id": "VS-EN-SMOKE",
+        "language": "en-US",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set vertical speed to five hundred",
+            "expected": "500"
+          },
+          {
+            "phrase": "Set vertical speed to minus one thousand",
+            "expected": "-1000"
+          }
+        ],
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "XPDR-EN-SMOKE",
+        "language": "en-US",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set transponder to four three two one",
+            "expected": "4321"
+          },
+          {
+            "phrase": "Set transponder to one two zero zero",
+            "expected": "1200"
+          }
+        ]
+      }
+    ],
+    "CoreInternalEN": [
+      {
+        "id": "HDG-EN-110",
+        "language": "en-US",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set heading bug to one one zero",
+            "expected": "110"
+          },
+          {
+            "phrase": "Set heading bug to two one zero",
+            "expected": "210"
+          }
+        ]
+      },
+      {
+        "id": "HDG-EN-210",
+        "language": "en-US",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set heading bug to two one zero",
+            "expected": "210"
+          },
+          {
+            "phrase": "Set heading bug to three one zero",
+            "expected": "310"
+          }
+        ]
+      },
+      {
+        "id": "HDG-EN-310",
+        "language": "en-US",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set heading bug to three one zero",
+            "expected": "310"
+          },
+          {
+            "phrase": "Set heading bug to zero nine zero",
+            "expected": "90"
+          }
+        ]
+      },
+      {
+        "id": "HDG-EN-360",
+        "language": "en-US",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set heading bug to three six zero",
+            "expected": "360"
+          },
+          {
+            "phrase": "Set heading bug to one eight zero",
+            "expected": "180"
+          }
+        ]
+      },
+      {
+        "id": "ALT-EN-0800",
+        "language": "en-US",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 40,
+        "variants": [
+          {
+            "phrase": "Set altitude to eight hundred",
+            "expected": "800"
+          },
+          {
+            "phrase": "Set altitude to three thousand",
+            "expected": "3000"
+          }
+        ],
+        "speechRates": [
+          -2,
+          0
+        ]
+      },
+      {
+        "id": "ALT-EN-8000",
+        "language": "en-US",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Set altitude to eight thousand",
+            "expected": "8000"
+          },
+          {
+            "phrase": "Set altitude to five thousand",
+            "expected": "5000"
+          }
+        ]
+      },
+      {
+        "id": "ALT-EN-12000",
+        "language": "en-US",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 50,
+        "variants": [
+          {
+            "phrase": "Set altitude to one two thousand",
+            "expected": "12000"
+          },
+          {
+            "phrase": "Set altitude to eight thousand",
+            "expected": "8000"
+          }
+        ]
+      },
+      {
+        "id": "VS-EN-P0500",
+        "language": "en-US",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set vertical speed to five hundred",
+            "expected": "500"
+          },
+          {
+            "phrase": "Set vertical speed to one thousand",
+            "expected": "1000"
+          }
+        ],
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "VS-EN-N1000",
+        "language": "en-US",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set vertical speed to minus one thousand",
+            "expected": "-1000"
+          },
+          {
+            "phrase": "Set vertical speed to five hundred",
+            "expected": "500"
+          }
+        ]
+      },
+      {
+        "id": "VS-EN-N1500",
+        "language": "en-US",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set vertical speed to minus one thousand five hundred",
+            "expected": "-1500"
+          },
+          {
+            "phrase": "Set vertical speed to minus five hundred",
+            "expected": "-500"
+          }
+        ]
+      },
+      {
+        "id": "XPDR-EN-1200",
+        "language": "en-US",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set transponder to one two zero zero",
+            "expected": "1200"
+          },
+          {
+            "phrase": "Set transponder to four three two one",
+            "expected": "4321"
+          }
+        ]
+      },
+      {
+        "id": "XPDR-EN-4321",
+        "language": "en-US",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set transponder to four three two one",
+            "expected": "4321"
+          },
+          {
+            "phrase": "Set transponder to seven zero zero zero",
+            "expected": "7000"
+          }
+        ]
+      }
+    ],
+    "SmokeInternalES": [
+      {
+        "id": "HDG-ES-SMOKE",
+        "language": "es-ES",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Ajustar rumbo a dos uno cero",
+            "expected": "210"
+          },
+          {
+            "phrase": "Ajustar rumbo a uno uno cero",
+            "expected": "110"
+          }
+        ]
+      },
+      {
+        "id": "ALT-ES-SMOKE",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 40,
+        "variants": [
+          {
+            "phrase": "Establecer altitud a ocho mil",
+            "expected": "8000"
+          },
+          {
+            "phrase": "Establecer altitud a cinco mil",
+            "expected": "5000"
+          }
+        ]
+      },
+      {
+        "id": "VS-ES-SMOKE",
+        "language": "es-ES",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer velocidad vertical a quinientos",
+            "expected": "500"
+          },
+          {
+            "phrase": "Establecer velocidad vertical a menos mil",
+            "expected": "-1000"
+          }
+        ]
+      },
+      {
+        "id": "XPDR-ES-SMOKE",
+        "language": "es-ES",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer transponder a cuatro tres dos uno",
+            "expected": "4321"
+          },
+          {
+            "phrase": "Establecer transponder a uno dos cero cero",
+            "expected": "1200"
+          }
+        ]
+      }
+    ],
+    "CoreInternalES": [
+      {
+        "id": "HDG-ES-110",
+        "language": "es-ES",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer rumbo uno uno cero",
+            "expected": "110"
+          },
+          {
+            "phrase": "Establecer rumbo dos uno cero",
+            "expected": "210"
+          }
+        ]
+      },
+      {
+        "id": "HDG-ES-210",
+        "language": "es-ES",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer rumbo dos uno cero",
+            "expected": "210"
+          },
+          {
+            "phrase": "Establecer rumbo tres uno cero",
+            "expected": "310"
+          }
+        ]
+      },
+      {
+        "id": "HDG-ES-310",
+        "language": "es-ES",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer rumbo tres uno cero",
+            "expected": "310"
+          },
+          {
+            "phrase": "Establecer rumbo cero nueve cero",
+            "expected": "90"
+          }
+        ]
+      },
+      {
+        "id": "HDG-ES-360",
+        "language": "es-ES",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer rumbo tres seis cero",
+            "expected": "360"
+          },
+          {
+            "phrase": "Establecer rumbo uno ocho cero",
+            "expected": "180"
+          }
+        ]
+      },
+      {
+        "id": "ALT-ES-0800",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 40,
+        "variants": [
+          {
+            "phrase": "Establecer altitud ochocientos",
+            "expected": "800"
+          },
+          {
+            "phrase": "Establecer altitud tres mil",
+            "expected": "3000"
+          }
+        ]
+      },
+      {
+        "id": "ALT-ES-8000",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Establecer altitud ocho mil",
+            "expected": "8000"
+          },
+          {
+            "phrase": "Establecer altitud cinco mil",
+            "expected": "5000"
+          }
+        ]
+      },
+      {
+        "id": "ALT-ES-12000",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 50,
+        "variants": [
+          {
+            "phrase": "Establecer altitud doce mil",
+            "expected": "12000"
+          },
+          {
+            "phrase": "Establecer altitud ocho mil",
+            "expected": "8000"
+          }
+        ]
+      },
+      {
+        "id": "VS-ES-P0800",
+        "language": "es-ES",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer velocidad vertical ochocientos",
+            "expected": "800"
+          },
+          {
+            "phrase": "Establecer velocidad vertical quinientos",
+            "expected": "500"
+          }
+        ]
+      },
+      {
+        "id": "VS-ES-N1000",
+        "language": "es-ES",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer velocidad vertical menos mil",
+            "expected": "-1000"
+          },
+          {
+            "phrase": "Establecer velocidad vertical quinientos",
+            "expected": "500"
+          }
+        ]
+      },
+      {
+        "id": "VS-ES-N1500",
+        "language": "es-ES",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer velocidad vertical menos mil quinientos",
+            "expected": "-1500"
+          },
+          {
+            "phrase": "Establecer velocidad vertical menos quinientos",
+            "expected": "-500"
+          }
+        ]
+      },
+      {
+        "id": "XPDR-ES-1200",
+        "language": "es-ES",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer transponder uno dos cero cero",
+            "expected": "1200"
+          },
+          {
+            "phrase": "Establecer transponder cuatro tres dos uno",
+            "expected": "4321"
+          }
+        ]
+      },
+      {
+        "id": "XPDR-ES-4321",
+        "language": "es-ES",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer transponder cuatro tres dos uno",
+            "expected": "4321"
+          },
+          {
+            "phrase": "Establecer transponder siete cero cero cero",
+            "expected": "7000"
+          }
+        ]
+      }
+    ]
+  }
+}

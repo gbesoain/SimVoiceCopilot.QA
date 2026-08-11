@@ -1,0 +1,15 @@
+{
+  "product": "SimVoice Copilot",
+  "appVersion": "1.0.18.0",
+  "qaHarnessVersion": "3.0.1",
+  "created": "2026-08-10",
+  "changesProductionSource": false,
+  "defaultUiCycles": 25,
+  "defaultLifecycleCycles": 30,
+  "finalVerdicts": [
+    "NO-GO",
+    "AUTOMATED PASS",
+    "GO STORE"
+  ],
+  "revision": "Harness-only correction of false NO-GO conditions found in v3.0.0."
+}

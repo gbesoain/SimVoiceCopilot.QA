@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Checklist default-group-name="QA Normal" default-list-name="QA Voice Flow" default-list-index="0">
+  <Group name="QA Normal" tab-label="QA">
+    <List uid="simvoice-qa-voice-flow" name="QA Voice Flow">
+      <Item type="note">
+        <Text>SimVoice Copilot deterministic Voice Checklist QA fixture.</Text>
+      </Item>
+      <Item type="actionable">
+        <LabelText>QA battery master</LabelText>
+        <ActionText>On</ActionText>
+      </Item>
+      <Item type="actionable">
+        <LabelText>QA avionics master</LabelText>
+        <ActionText>On</ActionText>
+      </Item>
+      <Item type="actionable">
+        <LabelText>QA cabin door</LabelText>
+        <ActionText>Closed</ActionText>
+      </Item>
+      <Item type="actionable">
+        <LabelText>QA seat belts</LabelText>
+        <ActionText>Fastened</ActionText>
+      </Item>
+      <Item type="actionable">
+        <LabelText>QA fuel selector</LabelText>
+        <ActionText>Both</ActionText>
+      </Item>
+      <Item type="actionable">
+        <LabelText>QA flight controls</LabelText>
+        <ActionText>Free and correct</ActionText>
+      </Item>
+      <Item type="actionable">
+        <LabelText>QA trim</LabelText>
+        <ActionText>Set</ActionText>
+      </Item>
+      <Item type="actionable">
+        <LabelText>QA transponder</LabelText>
+        <ActionText>Standby</ActionText>
+      </Item>
+    </List>
+    <List uid="simvoice-qa-next-checklist" name="QA Next Checklist">
+      <Item type="actionable">
+        <LabelText>QA next checklist item</LabelText>
+        <ActionText>Ready</ActionText>
+      </Item>
+      <Item type="actionable">
+        <LabelText>QA final checklist item</LabelText>
+        <ActionText>Ready</ActionText>
+      </Item>
+    </List>
+  </Group>
+</Checklist>

@@ -1,0 +1,2280 @@
+{
+  "schemaVersion": 1,
+  "description": "Phase 2.4 extended unattended internal-audio functional tests: binary simulator states, call-outs, negative safety cases and 50-command mixed sessions.",
+  "suites": {
+    "StatesInternalEN": [
+      {
+        "id": "STATE-EN-AUTOPILOT",
+        "type": "toggle",
+        "language": "en-US",
+        "phrase": "autopilot",
+        "variable": "AutopilotMaster",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": true
+      },
+      {
+        "id": "STATE-EN-PARKING-BRAKE",
+        "type": "toggle",
+        "language": "en-US",
+        "phrase": "parking brake",
+        "variable": "ParkingBrake",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": true
+      },
+      {
+        "id": "STATE-EN-LANDING-LIGHTS",
+        "type": "toggle",
+        "language": "en-US",
+        "phrase": "landing lights",
+        "variable": "LandingLight",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": true
+      },
+      {
+        "id": "STATE-EN-BEACON-LIGHTS",
+        "type": "toggle",
+        "language": "en-US",
+        "phrase": "beacon lights",
+        "variable": "BeaconLight",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": true
+      },
+      {
+        "id": "STATE-EN-FLAPS-FULL",
+        "type": "value",
+        "language": "en-US",
+        "variable": "FlapsHandleIndex",
+        "tolerance": 0,
+        "timeoutSeconds": 25,
+        "variants": [
+          {
+            "phrase": "flaps full down",
+            "expected": "3"
+          },
+          {
+            "phrase": "flaps full up",
+            "expected": "0"
+          }
+        ],
+        "cleanupPhrase": "flaps full up",
+        "cleanupVariable": "FlapsHandleIndex",
+        "cleanupExpected": "0",
+        "cleanupTolerance": 0
+      }
+    ],
+    "StatesInternalES": [
+      {
+        "id": "STATE-ES-AUTOPILOT",
+        "type": "toggle",
+        "language": "es-ES",
+        "phrase": "piloto automático",
+        "variable": "AutopilotMaster",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": true
+      },
+      {
+        "id": "STATE-ES-PARKING-BRAKE",
+        "type": "toggle",
+        "language": "es-ES",
+        "phrase": "freno de estacionamiento",
+        "variable": "ParkingBrake",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": true
+      },
+      {
+        "id": "STATE-ES-LANDING-LIGHTS",
+        "type": "toggle",
+        "language": "es-ES",
+        "phrase": "luces de aterrizaje",
+        "variable": "LandingLight",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": true
+      },
+      {
+        "id": "STATE-ES-BEACON-LIGHTS",
+        "type": "toggle",
+        "language": "es-ES",
+        "phrase": "luces de baliza",
+        "variable": "BeaconLight",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": true
+      },
+      {
+        "id": "STATE-ES-FLAPS-FULL",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "FlapsHandleIndex",
+        "tolerance": 0,
+        "timeoutSeconds": 25,
+        "variants": [
+          {
+            "phrase": "flaps completamente abajo",
+            "expected": "3"
+          },
+          {
+            "phrase": "flaps completamente arriba",
+            "expected": "0"
+          }
+        ],
+        "cleanupPhrase": "flaps completamente arriba",
+        "cleanupVariable": "FlapsHandleIndex",
+        "cleanupExpected": "0",
+        "cleanupTolerance": 0
+      }
+    ],
+    "CalloutsInternalEN": [
+      {
+        "id": "CALLOUT-EN-ALTITUDE",
+        "type": "callout",
+        "language": "en-US",
+        "phrase": "check altitude",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "PlaneAltitude",
+            "responseNumberIndex": 0,
+            "tolerance": 5
+          }
+        ]
+      },
+      {
+        "id": "CALLOUT-EN-HEADING",
+        "type": "callout",
+        "language": "en-US",
+        "phrase": "check heading",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "PlaneHeading",
+            "responseNumberIndex": 0,
+            "tolerance": 2
+          }
+        ]
+      },
+      {
+        "id": "CALLOUT-EN-FUEL",
+        "type": "callout",
+        "language": "en-US",
+        "phrase": "check fuel",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "FuelGallons",
+            "responseNumberIndex": 0,
+            "tolerance": 0.3
+          }
+        ]
+      },
+      {
+        "id": "CALLOUT-EN-GROUND-SPEED",
+        "type": "callout",
+        "language": "en-US",
+        "phrase": "check ground speed",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "GroundSpeed",
+            "responseNumberIndex": 0,
+            "tolerance": 2
+          }
+        ]
+      },
+      {
+        "id": "CALLOUT-EN-VERTICAL-SPEED",
+        "type": "callout",
+        "language": "en-US",
+        "phrase": "check vertical speed",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "ActualVerticalSpeed",
+            "responseNumberIndex": 0,
+            "tolerance": 75
+          }
+        ]
+      },
+      {
+        "id": "CALLOUT-EN-WIND",
+        "type": "callout",
+        "language": "en-US",
+        "phrase": "check wind",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "WindDirection",
+            "responseNumberIndex": 0,
+            "tolerance": 4
+          },
+          {
+            "variable": "WindSpeed",
+            "responseNumberIndex": 1,
+            "tolerance": 2
+          }
+        ]
+      }
+    ],
+    "CalloutsInternalES": [
+      {
+        "id": "CALLOUT-ES-ALTITUD",
+        "type": "callout",
+        "language": "es-ES",
+        "phrase": "consultar altitud",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "PlaneAltitude",
+            "responseNumberIndex": 0,
+            "tolerance": 5
+          }
+        ]
+      },
+      {
+        "id": "CALLOUT-ES-RUMBO",
+        "type": "callout",
+        "language": "es-ES",
+        "phrase": "consultar rumbo",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "PlaneHeading",
+            "responseNumberIndex": 0,
+            "tolerance": 2
+          }
+        ]
+      },
+      {
+        "id": "CALLOUT-ES-COMBUSTIBLE",
+        "type": "callout",
+        "language": "es-ES",
+        "phrase": "consultar combustible",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "FuelGallons",
+            "responseNumberIndex": 0,
+            "tolerance": 0.3
+          }
+        ]
+      },
+      {
+        "id": "CALLOUT-ES-VELOCIDAD-SUELO",
+        "type": "callout",
+        "language": "es-ES",
+        "phrase": "consultar velocidad sobre el suelo",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "GroundSpeed",
+            "responseNumberIndex": 0,
+            "tolerance": 2
+          }
+        ]
+      },
+      {
+        "id": "CALLOUT-ES-VELOCIDAD-VERTICAL",
+        "type": "callout",
+        "language": "es-ES",
+        "phrase": "consultar velocidad vertical",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "ActualVerticalSpeed",
+            "responseNumberIndex": 0,
+            "tolerance": 75
+          }
+        ]
+      },
+      {
+        "id": "CALLOUT-ES-VIENTO",
+        "type": "callout",
+        "language": "es-ES",
+        "phrase": "consultar viento",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "WindDirection",
+            "responseNumberIndex": 0,
+            "tolerance": 4
+          },
+          {
+            "variable": "WindSpeed",
+            "responseNumberIndex": 1,
+            "tolerance": 2
+          }
+        ]
+      }
+    ],
+    "NegativeInternalEN": [
+      {
+        "id": "NEG-EN-HEADING-BANANA",
+        "type": "negative",
+        "language": "en-US",
+        "phrase": "set heading to banana",
+        "timeoutSeconds": 15,
+        "guardVariables": [
+          "HeadingBug",
+          "SelectedAltitude",
+          "SelectedVerticalSpeed",
+          "Transponder",
+          "AutopilotMaster",
+          "ParkingBrake",
+          "FlapsHandleIndex",
+          "LandingLight",
+          "BeaconLight"
+        ],
+        "forbiddenFeedbackPattern": "(?i)(command executed|executing command|simconnect event|verified: yes|result:.*verified)",
+        "expectedInteraction": "value-prompt"
+      },
+      {
+        "id": "NEG-EN-ALTITUDE-INCOMPLETE",
+        "type": "negative",
+        "language": "en-US",
+        "phrase": "set altitude to",
+        "timeoutSeconds": 15,
+        "guardVariables": [
+          "HeadingBug",
+          "SelectedAltitude",
+          "SelectedVerticalSpeed",
+          "Transponder",
+          "AutopilotMaster",
+          "ParkingBrake",
+          "FlapsHandleIndex",
+          "LandingLight",
+          "BeaconLight"
+        ],
+        "forbiddenFeedbackPattern": "(?i)(command executed|executing command|simconnect event|verified: yes|result:.*verified)",
+        "expectedInteraction": "value-prompt"
+      },
+      {
+        "id": "NEG-EN-XPDR-NINE",
+        "type": "negative",
+        "language": "en-US",
+        "phrase": "set transponder to nine",
+        "timeoutSeconds": 15,
+        "guardVariables": [
+          "HeadingBug",
+          "SelectedAltitude",
+          "SelectedVerticalSpeed",
+          "Transponder",
+          "AutopilotMaster",
+          "ParkingBrake",
+          "FlapsHandleIndex",
+          "LandingLight",
+          "BeaconLight"
+        ],
+        "forbiddenFeedbackPattern": "(?i)(command executed|executing command|simconnect event|verified: yes|result:.*verified)",
+        "expectedInteraction": "value-prompt"
+      },
+      {
+        "id": "NEG-EN-RANDOM",
+        "type": "negative",
+        "language": "en-US",
+        "phrase": "purple banana weather impossible",
+        "timeoutSeconds": 15,
+        "guardVariables": [
+          "HeadingBug",
+          "SelectedAltitude",
+          "SelectedVerticalSpeed",
+          "Transponder",
+          "AutopilotMaster",
+          "ParkingBrake",
+          "FlapsHandleIndex",
+          "LandingLight",
+          "BeaconLight"
+        ],
+        "forbiddenFeedbackPattern": "(?i)(command executed|executing command|simconnect event|verified: yes|result:.*verified)",
+        "expectedInteraction": "no-match"
+      }
+    ],
+    "NegativeInternalES": [
+      {
+        "id": "NEG-ES-RUMBO-BANANA",
+        "type": "negative",
+        "language": "es-ES",
+        "phrase": "establecer rumbo banana",
+        "timeoutSeconds": 15,
+        "guardVariables": [
+          "HeadingBug",
+          "SelectedAltitude",
+          "SelectedVerticalSpeed",
+          "Transponder",
+          "AutopilotMaster",
+          "ParkingBrake",
+          "FlapsHandleIndex",
+          "LandingLight",
+          "BeaconLight"
+        ],
+        "forbiddenFeedbackPattern": "(?i)(command executed|executing command|simconnect event|verified: yes|result:.*verified)",
+        "expectedInteraction": "value-prompt"
+      },
+      {
+        "id": "NEG-ES-ALTITUD-INCOMPLETA",
+        "type": "negative",
+        "language": "es-ES",
+        "phrase": "establecer altitud",
+        "timeoutSeconds": 15,
+        "guardVariables": [
+          "HeadingBug",
+          "SelectedAltitude",
+          "SelectedVerticalSpeed",
+          "Transponder",
+          "AutopilotMaster",
+          "ParkingBrake",
+          "FlapsHandleIndex",
+          "LandingLight",
+          "BeaconLight"
+        ],
+        "forbiddenFeedbackPattern": "(?i)(command executed|executing command|simconnect event|verified: yes|result:.*verified)",
+        "expectedInteraction": "value-prompt"
+      },
+      {
+        "id": "NEG-ES-XPDR-NUEVE",
+        "type": "negative",
+        "language": "es-ES",
+        "phrase": "establecer transponder nueve",
+        "timeoutSeconds": 15,
+        "guardVariables": [
+          "HeadingBug",
+          "SelectedAltitude",
+          "SelectedVerticalSpeed",
+          "Transponder",
+          "AutopilotMaster",
+          "ParkingBrake",
+          "FlapsHandleIndex",
+          "LandingLight",
+          "BeaconLight"
+        ],
+        "forbiddenFeedbackPattern": "(?i)(command executed|executing command|simconnect event|verified: yes|result:.*verified)",
+        "expectedInteraction": "safe-rejection",
+        "waitForAiIdle": true,
+        "requiredFeedbackPattern": "(?i)(no safe match|no matching command|not executed|invalid|blocked)"
+      },
+      {
+        "id": "NEG-ES-ALEATORIA",
+        "type": "negative",
+        "language": "es-ES",
+        "phrase": "frase morada imposible banana",
+        "timeoutSeconds": 15,
+        "guardVariables": [
+          "HeadingBug",
+          "SelectedAltitude",
+          "SelectedVerticalSpeed",
+          "Transponder",
+          "AutopilotMaster",
+          "ParkingBrake",
+          "FlapsHandleIndex",
+          "LandingLight",
+          "BeaconLight"
+        ],
+        "forbiddenFeedbackPattern": "(?i)(command executed|executing command|simconnect event|verified: yes|result:.*verified)",
+        "expectedInteraction": "no-match"
+      }
+    ],
+    "SessionInternalEN": [
+      {
+        "id": "SESSION-EN-01-HDG",
+        "type": "value",
+        "language": "en-US",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set heading bug to one one zero",
+            "expected": "110"
+          },
+          {
+            "phrase": "Set heading bug to two one zero",
+            "expected": "210"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-02-HDG",
+        "type": "value",
+        "language": "en-US",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set heading bug to two one zero",
+            "expected": "210"
+          },
+          {
+            "phrase": "Set heading bug to one one zero",
+            "expected": "110"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-03-HDG",
+        "type": "value",
+        "language": "en-US",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set heading bug to three one zero",
+            "expected": "310"
+          },
+          {
+            "phrase": "Set heading bug to two one zero",
+            "expected": "210"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-04-HDG",
+        "type": "value",
+        "language": "en-US",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set heading bug to three six zero",
+            "expected": "360"
+          },
+          {
+            "phrase": "Set heading bug to two one zero",
+            "expected": "210"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-05-HDG",
+        "type": "value",
+        "language": "en-US",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set heading bug to zero nine zero",
+            "expected": "90"
+          },
+          {
+            "phrase": "Set heading bug to two one zero",
+            "expected": "210"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-06-HDG",
+        "type": "value",
+        "language": "en-US",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set heading bug to one eight zero",
+            "expected": "180"
+          },
+          {
+            "phrase": "Set heading bug to two one zero",
+            "expected": "210"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-07-HDG",
+        "type": "value",
+        "language": "en-US",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set heading bug to two seven zero",
+            "expected": "270"
+          },
+          {
+            "phrase": "Set heading bug to two one zero",
+            "expected": "210"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-08-HDG",
+        "type": "value",
+        "language": "en-US",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set heading bug to one one zero",
+            "expected": "110"
+          },
+          {
+            "phrase": "Set heading bug to two one zero",
+            "expected": "210"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-09-ALT",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Set altitude to three thousand",
+            "expected": "3000"
+          },
+          {
+            "phrase": "Set altitude to eight thousand",
+            "expected": "8000"
+          }
+        ],
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "SESSION-EN-10-ALT",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Set altitude to five thousand",
+            "expected": "5000"
+          },
+          {
+            "phrase": "Set altitude to eight thousand",
+            "expected": "8000"
+          }
+        ],
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "SESSION-EN-11-ALT",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Set altitude to eight thousand",
+            "expected": "8000"
+          },
+          {
+            "phrase": "Set altitude to five thousand",
+            "expected": "5000"
+          }
+        ],
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "SESSION-EN-12-ALT",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Set altitude to one two thousand",
+            "expected": "12000"
+          },
+          {
+            "phrase": "Set altitude to eight thousand",
+            "expected": "8000"
+          }
+        ],
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "SESSION-EN-13-ALT",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Set altitude to eight hundred",
+            "expected": "800"
+          },
+          {
+            "phrase": "Set altitude to eight thousand",
+            "expected": "8000"
+          }
+        ],
+        "speechRates": [
+          -2,
+          0
+        ]
+      },
+      {
+        "id": "SESSION-EN-14-ALT",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Set altitude to three thousand",
+            "expected": "3000"
+          },
+          {
+            "phrase": "Set altitude to eight thousand",
+            "expected": "8000"
+          }
+        ],
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "SESSION-EN-15-ALT",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Set altitude to eight thousand",
+            "expected": "8000"
+          },
+          {
+            "phrase": "Set altitude to five thousand",
+            "expected": "5000"
+          }
+        ],
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "SESSION-EN-16-ALT",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Set altitude to five thousand",
+            "expected": "5000"
+          },
+          {
+            "phrase": "Set altitude to eight thousand",
+            "expected": "8000"
+          }
+        ],
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "SESSION-EN-17-VS",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Set vertical speed to five hundred",
+            "expected": "500"
+          },
+          {
+            "phrase": "Set vertical speed to minus one thousand",
+            "expected": "-1000"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-18-VS",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Set vertical speed to minus one thousand",
+            "expected": "-1000"
+          },
+          {
+            "phrase": "Set vertical speed to five hundred",
+            "expected": "500"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-19-VS",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Set vertical speed to minus one thousand five hundred",
+            "expected": "-1500"
+          },
+          {
+            "phrase": "Set vertical speed to five hundred",
+            "expected": "500"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-20-VS",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Set vertical speed to eight hundred",
+            "expected": "800"
+          },
+          {
+            "phrase": "Set vertical speed to five hundred",
+            "expected": "500"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-21-VS",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Set vertical speed to minus five hundred",
+            "expected": "-500"
+          },
+          {
+            "phrase": "Set vertical speed to five hundred",
+            "expected": "500"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-22-VS",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Set vertical speed to one thousand",
+            "expected": "1000"
+          },
+          {
+            "phrase": "Set vertical speed to five hundred",
+            "expected": "500"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-23-VS",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Set vertical speed to five hundred",
+            "expected": "500"
+          },
+          {
+            "phrase": "Set vertical speed to minus one thousand",
+            "expected": "-1000"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-24-VS",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Set vertical speed to minus one thousand",
+            "expected": "-1000"
+          },
+          {
+            "phrase": "Set vertical speed to five hundred",
+            "expected": "500"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-25-XPDR",
+        "type": "value",
+        "language": "en-US",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set transponder to one two zero zero",
+            "expected": "1200"
+          },
+          {
+            "phrase": "Set transponder to four three two one",
+            "expected": "4321"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-26-XPDR",
+        "type": "value",
+        "language": "en-US",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set transponder to four three two one",
+            "expected": "4321"
+          },
+          {
+            "phrase": "Set transponder to one two zero zero",
+            "expected": "1200"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-27-XPDR",
+        "type": "value",
+        "language": "en-US",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set transponder to seven zero zero zero",
+            "expected": "7000"
+          },
+          {
+            "phrase": "Set transponder to one two zero zero",
+            "expected": "1200"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-28-XPDR",
+        "type": "value",
+        "language": "en-US",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set transponder to two zero zero zero",
+            "expected": "2000"
+          },
+          {
+            "phrase": "Set transponder to one two zero zero",
+            "expected": "1200"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-29-XPDR",
+        "type": "value",
+        "language": "en-US",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set transponder to one two zero zero",
+            "expected": "1200"
+          },
+          {
+            "phrase": "Set transponder to four three two one",
+            "expected": "4321"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-30-XPDR",
+        "type": "value",
+        "language": "en-US",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set transponder to four three two one",
+            "expected": "4321"
+          },
+          {
+            "phrase": "Set transponder to one two zero zero",
+            "expected": "1200"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-31-XPDR",
+        "type": "value",
+        "language": "en-US",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set transponder to seven zero zero zero",
+            "expected": "7000"
+          },
+          {
+            "phrase": "Set transponder to one two zero zero",
+            "expected": "1200"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-32-XPDR",
+        "type": "value",
+        "language": "en-US",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set transponder to two zero zero zero",
+            "expected": "2000"
+          },
+          {
+            "phrase": "Set transponder to one two zero zero",
+            "expected": "1200"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-33-CALLOUT",
+        "type": "callout",
+        "language": "en-US",
+        "phrase": "check altitude",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "PlaneAltitude",
+            "responseNumberIndex": 0,
+            "tolerance": 5
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-34-CALLOUT",
+        "type": "callout",
+        "language": "en-US",
+        "phrase": "check heading",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "PlaneHeading",
+            "responseNumberIndex": 0,
+            "tolerance": 2
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-35-CALLOUT",
+        "type": "callout",
+        "language": "en-US",
+        "phrase": "check fuel",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "FuelGallons",
+            "responseNumberIndex": 0,
+            "tolerance": 0.3
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-36-CALLOUT",
+        "type": "callout",
+        "language": "en-US",
+        "phrase": "check ground speed",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "GroundSpeed",
+            "responseNumberIndex": 0,
+            "tolerance": 2
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-37-CALLOUT",
+        "type": "callout",
+        "language": "en-US",
+        "phrase": "check vertical speed",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "ActualVerticalSpeed",
+            "responseNumberIndex": 0,
+            "tolerance": 75
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-38-CALLOUT",
+        "type": "callout",
+        "language": "en-US",
+        "phrase": "check wind",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "WindDirection",
+            "responseNumberIndex": 0,
+            "tolerance": 4
+          },
+          {
+            "variable": "WindSpeed",
+            "responseNumberIndex": 1,
+            "tolerance": 2
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-39-STATE",
+        "type": "toggle",
+        "language": "en-US",
+        "phrase": "autopilot",
+        "variable": "AutopilotMaster",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": false
+      },
+      {
+        "id": "SESSION-EN-40-STATE",
+        "type": "toggle",
+        "language": "en-US",
+        "phrase": "autopilot",
+        "variable": "AutopilotMaster",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": false
+      },
+      {
+        "id": "SESSION-EN-41-STATE",
+        "type": "toggle",
+        "language": "en-US",
+        "phrase": "parking brake",
+        "variable": "ParkingBrake",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": false
+      },
+      {
+        "id": "SESSION-EN-42-STATE",
+        "type": "toggle",
+        "language": "en-US",
+        "phrase": "parking brake",
+        "variable": "ParkingBrake",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": false
+      },
+      {
+        "id": "SESSION-EN-43-STATE",
+        "type": "toggle",
+        "language": "en-US",
+        "phrase": "landing lights",
+        "variable": "LandingLight",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": false
+      },
+      {
+        "id": "SESSION-EN-44-STATE",
+        "type": "toggle",
+        "language": "en-US",
+        "phrase": "landing lights",
+        "variable": "LandingLight",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": false
+      },
+      {
+        "id": "SESSION-EN-45-STATE",
+        "type": "toggle",
+        "language": "en-US",
+        "phrase": "beacon lights",
+        "variable": "BeaconLight",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": false
+      },
+      {
+        "id": "SESSION-EN-46-STATE",
+        "type": "toggle",
+        "language": "en-US",
+        "phrase": "beacon lights",
+        "variable": "BeaconLight",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": false
+      },
+      {
+        "id": "SESSION-EN-47-FINAL",
+        "type": "value",
+        "language": "en-US",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set heading bug to two one zero",
+            "expected": "210"
+          },
+          {
+            "phrase": "Set heading bug to one one zero",
+            "expected": "110"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-48-FINAL",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Set altitude to eight thousand",
+            "expected": "8000"
+          },
+          {
+            "phrase": "Set altitude to five thousand",
+            "expected": "5000"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-49-FINAL",
+        "type": "value",
+        "language": "en-US",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Set vertical speed to five hundred",
+            "expected": "500"
+          },
+          {
+            "phrase": "Set vertical speed to minus one thousand",
+            "expected": "-1000"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-EN-50-FINAL",
+        "type": "value",
+        "language": "en-US",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Set transponder to one two zero zero",
+            "expected": "1200"
+          },
+          {
+            "phrase": "Set transponder to four three two one",
+            "expected": "4321"
+          }
+        ]
+      }
+    ],
+    "SessionInternalES": [
+      {
+        "id": "SESSION-ES-01-HDG",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer rumbo uno uno cero",
+            "expected": "110"
+          },
+          {
+            "phrase": "Establecer rumbo dos uno cero",
+            "expected": "210"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-02-HDG",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer rumbo dos uno cero",
+            "expected": "210"
+          },
+          {
+            "phrase": "Establecer rumbo uno uno cero",
+            "expected": "110"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-03-HDG",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer rumbo tres uno cero",
+            "expected": "310"
+          },
+          {
+            "phrase": "Establecer rumbo dos uno cero",
+            "expected": "210"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-04-HDG",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer rumbo tres seis cero",
+            "expected": "360"
+          },
+          {
+            "phrase": "Establecer rumbo dos uno cero",
+            "expected": "210"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-05-HDG",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer rumbo cero nueve cero",
+            "expected": "90"
+          },
+          {
+            "phrase": "Establecer rumbo dos uno cero",
+            "expected": "210"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-06-HDG",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer rumbo uno ocho cero",
+            "expected": "180"
+          },
+          {
+            "phrase": "Establecer rumbo dos uno cero",
+            "expected": "210"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-07-HDG",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer rumbo dos siete cero",
+            "expected": "270"
+          },
+          {
+            "phrase": "Establecer rumbo dos uno cero",
+            "expected": "210"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-08-HDG",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer rumbo uno uno cero",
+            "expected": "110"
+          },
+          {
+            "phrase": "Establecer rumbo dos uno cero",
+            "expected": "210"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-09-ALT",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Establecer altitud tres mil",
+            "expected": "3000"
+          },
+          {
+            "phrase": "Establecer altitud ocho mil",
+            "expected": "8000"
+          }
+        ],
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "SESSION-ES-10-ALT",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Establecer altitud cinco mil",
+            "expected": "5000"
+          },
+          {
+            "phrase": "Establecer altitud ocho mil",
+            "expected": "8000"
+          }
+        ],
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "SESSION-ES-11-ALT",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Establecer altitud ocho mil",
+            "expected": "8000"
+          },
+          {
+            "phrase": "Establecer altitud cinco mil",
+            "expected": "5000"
+          }
+        ],
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "SESSION-ES-12-ALT",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Establecer altitud doce mil",
+            "expected": "12000"
+          },
+          {
+            "phrase": "Establecer altitud ocho mil",
+            "expected": "8000"
+          }
+        ],
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "SESSION-ES-13-ALT",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Establecer altitud ochocientos",
+            "expected": "800"
+          },
+          {
+            "phrase": "Establecer altitud ocho mil",
+            "expected": "8000"
+          }
+        ],
+        "speechRates": [
+          -2,
+          0
+        ]
+      },
+      {
+        "id": "SESSION-ES-14-ALT",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Establecer altitud tres mil",
+            "expected": "3000"
+          },
+          {
+            "phrase": "Establecer altitud ocho mil",
+            "expected": "8000"
+          }
+        ],
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "SESSION-ES-15-ALT",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Establecer altitud ocho mil",
+            "expected": "8000"
+          },
+          {
+            "phrase": "Establecer altitud cinco mil",
+            "expected": "5000"
+          }
+        ],
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "SESSION-ES-16-ALT",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Establecer altitud cinco mil",
+            "expected": "5000"
+          },
+          {
+            "phrase": "Establecer altitud ocho mil",
+            "expected": "8000"
+          }
+        ],
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "SESSION-ES-17-VS",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Establecer velocidad vertical quinientos",
+            "expected": "500"
+          },
+          {
+            "phrase": "Establecer velocidad vertical menos mil",
+            "expected": "-1000"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-18-VS",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Establecer velocidad vertical menos mil",
+            "expected": "-1000"
+          },
+          {
+            "phrase": "Establecer velocidad vertical quinientos",
+            "expected": "500"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-19-VS",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Establecer velocidad vertical menos mil quinientos",
+            "expected": "-1500"
+          },
+          {
+            "phrase": "Establecer velocidad vertical quinientos",
+            "expected": "500"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-20-VS",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Establecer velocidad vertical ochocientos",
+            "expected": "800"
+          },
+          {
+            "phrase": "Establecer velocidad vertical quinientos",
+            "expected": "500"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-21-VS",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Establecer velocidad vertical menos quinientos",
+            "expected": "-500"
+          },
+          {
+            "phrase": "Establecer velocidad vertical quinientos",
+            "expected": "500"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-22-VS",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Establecer velocidad vertical mil",
+            "expected": "1000"
+          },
+          {
+            "phrase": "Establecer velocidad vertical quinientos",
+            "expected": "500"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-23-VS",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Establecer velocidad vertical quinientos",
+            "expected": "500"
+          },
+          {
+            "phrase": "Establecer velocidad vertical menos mil",
+            "expected": "-1000"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-24-VS",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Establecer velocidad vertical menos mil",
+            "expected": "-1000"
+          },
+          {
+            "phrase": "Establecer velocidad vertical quinientos",
+            "expected": "500"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-25-XPDR",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer transponder uno dos cero cero",
+            "expected": "1200"
+          },
+          {
+            "phrase": "Establecer transponder cuatro tres dos uno",
+            "expected": "4321"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-26-XPDR",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer transponder cuatro tres dos uno",
+            "expected": "4321"
+          },
+          {
+            "phrase": "Establecer transponder uno dos cero cero",
+            "expected": "1200"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-27-XPDR",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer transponder siete cero cero cero",
+            "expected": "7000"
+          },
+          {
+            "phrase": "Establecer transponder uno dos cero cero",
+            "expected": "1200"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-28-XPDR",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer transponder dos cero cero cero",
+            "expected": "2000"
+          },
+          {
+            "phrase": "Establecer transponder uno dos cero cero",
+            "expected": "1200"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-29-XPDR",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer transponder uno dos cero cero",
+            "expected": "1200"
+          },
+          {
+            "phrase": "Establecer transponder cuatro tres dos uno",
+            "expected": "4321"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-30-XPDR",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer transponder cuatro tres dos uno",
+            "expected": "4321"
+          },
+          {
+            "phrase": "Establecer transponder uno dos cero cero",
+            "expected": "1200"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-31-XPDR",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer transponder siete cero cero cero",
+            "expected": "7000"
+          },
+          {
+            "phrase": "Establecer transponder uno dos cero cero",
+            "expected": "1200"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-32-XPDR",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer transponder dos cero cero cero",
+            "expected": "2000"
+          },
+          {
+            "phrase": "Establecer transponder uno dos cero cero",
+            "expected": "1200"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-33-CALLOUT",
+        "type": "callout",
+        "language": "es-ES",
+        "phrase": "consultar altitud",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "PlaneAltitude",
+            "responseNumberIndex": 0,
+            "tolerance": 5
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-34-CALLOUT",
+        "type": "callout",
+        "language": "es-ES",
+        "phrase": "consultar rumbo",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "PlaneHeading",
+            "responseNumberIndex": 0,
+            "tolerance": 2
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-35-CALLOUT",
+        "type": "callout",
+        "language": "es-ES",
+        "phrase": "consultar combustible",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "FuelGallons",
+            "responseNumberIndex": 0,
+            "tolerance": 0.3
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-36-CALLOUT",
+        "type": "callout",
+        "language": "es-ES",
+        "phrase": "consultar velocidad sobre el suelo",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "GroundSpeed",
+            "responseNumberIndex": 0,
+            "tolerance": 2
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-37-CALLOUT",
+        "type": "callout",
+        "language": "es-ES",
+        "phrase": "consultar velocidad vertical",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "ActualVerticalSpeed",
+            "responseNumberIndex": 0,
+            "tolerance": 75
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-38-CALLOUT",
+        "type": "callout",
+        "language": "es-ES",
+        "phrase": "consultar viento",
+        "timeoutSeconds": 20,
+        "speechRates": [
+          0,
+          -2
+        ],
+        "measurements": [
+          {
+            "variable": "WindDirection",
+            "responseNumberIndex": 0,
+            "tolerance": 4
+          },
+          {
+            "variable": "WindSpeed",
+            "responseNumberIndex": 1,
+            "tolerance": 2
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-39-STATE",
+        "type": "toggle",
+        "language": "es-ES",
+        "phrase": "piloto automático",
+        "variable": "AutopilotMaster",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": false
+      },
+      {
+        "id": "SESSION-ES-40-STATE",
+        "type": "toggle",
+        "language": "es-ES",
+        "phrase": "piloto automático",
+        "variable": "AutopilotMaster",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": false
+      },
+      {
+        "id": "SESSION-ES-41-STATE",
+        "type": "toggle",
+        "language": "es-ES",
+        "phrase": "freno de estacionamiento",
+        "variable": "ParkingBrake",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": false
+      },
+      {
+        "id": "SESSION-ES-42-STATE",
+        "type": "toggle",
+        "language": "es-ES",
+        "phrase": "freno de estacionamiento",
+        "variable": "ParkingBrake",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": false
+      },
+      {
+        "id": "SESSION-ES-43-STATE",
+        "type": "toggle",
+        "language": "es-ES",
+        "phrase": "luces de aterrizaje",
+        "variable": "LandingLight",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": false
+      },
+      {
+        "id": "SESSION-ES-44-STATE",
+        "type": "toggle",
+        "language": "es-ES",
+        "phrase": "luces de aterrizaje",
+        "variable": "LandingLight",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": false
+      },
+      {
+        "id": "SESSION-ES-45-STATE",
+        "type": "toggle",
+        "language": "es-ES",
+        "phrase": "luces de baliza",
+        "variable": "BeaconLight",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": false
+      },
+      {
+        "id": "SESSION-ES-46-STATE",
+        "type": "toggle",
+        "language": "es-ES",
+        "phrase": "luces de baliza",
+        "variable": "BeaconLight",
+        "tolerance": 0,
+        "timeoutSeconds": 20,
+        "restore": false
+      },
+      {
+        "id": "SESSION-ES-47-FINAL",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer rumbo dos uno cero",
+            "expected": "210"
+          },
+          {
+            "phrase": "Establecer rumbo uno uno cero",
+            "expected": "110"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-48-FINAL",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 45,
+        "variants": [
+          {
+            "phrase": "Establecer altitud ocho mil",
+            "expected": "8000"
+          },
+          {
+            "phrase": "Establecer altitud cinco mil",
+            "expected": "5000"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-49-FINAL",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "variants": [
+          {
+            "phrase": "Establecer velocidad vertical quinientos",
+            "expected": "500"
+          },
+          {
+            "phrase": "Establecer velocidad vertical menos mil",
+            "expected": "-1000"
+          }
+        ]
+      },
+      {
+        "id": "SESSION-ES-50-FINAL",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "variants": [
+          {
+            "phrase": "Establecer transponder uno dos cero cero",
+            "expected": "1200"
+          },
+          {
+            "phrase": "Establecer transponder cuatro tres dos uno",
+            "expected": "4321"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+# QA execution results - LOCAL ONLY
+QA-Runs/
+
+# .NET / Visual Studio generated files
+.vs/
+**/bin/
+**/obj/
+*.user
+*.suo
+*.pdb
+
+# Test generated output
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# Historical duplicated certification backups
+StoreCertification-*.backup-*/
+
+# OS
+Thumbs.db
+Desktop.ini

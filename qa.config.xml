@@ -1,0 +1,117 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<QaConfiguration>
+  <!-- QA sources: C:\Users\Gonzalo\Desktop\MSFS_App\SimVoiceCopilot.QA -->
+  <!-- SimVoice sources (reference only): C:\Users\Gonzalo\Desktop\MSFS_App\MSFSVoiceMapperApp -->
+  <Application>
+    <!-- MSIX / Microsoft Store only. Run-QA-MSIX.ps1 injects the installed AppID at runtime. -->
+    <LaunchMode>PackagedApp</LaunchMode>
+    <ExecutablePath></ExecutablePath>
+    <LaunchArguments></LaunchArguments>
+    <WorkingDirectory></WorkingDirectory>
+    <PackagedAppId></PackagedAppId>
+    <ProcessName>SimVoiceCopilotApp</ProcessName>
+    <AttachIfRunning>true</AttachIfRunning>
+    <StartupTimeoutSeconds>60</StartupTimeoutSeconds>
+    <ShutdownTimeoutSeconds>20</ShutdownTimeoutSeconds>
+  </Application>
+
+  <Execution>
+    <Cycles>25</Cycles>
+    <ElementTimeoutSeconds>10</ElementTimeoutSeconds>
+    <DelayAfterActionMs>700</DelayAfterActionMs>
+    <ResponsivenessRetries>3</ResponsivenessRetries>
+    <ResponsivenessRetryDelayMs>1000</ResponsivenessRetryDelayMs>
+    <MetricsIntervalMs>1000</MetricsIntervalMs>
+
+    <CaptureScreenshotOnEveryStep>false</CaptureScreenshotOnEveryStep>
+    <CaptureScreenshotOnFailure>true</CaptureScreenshotOnFailure>
+    <DumpUiTreeAtStartup>true</DumpUiTreeAtStartup>
+    <TestSingleInstanceRestore>true</TestSingleInstanceRestore>
+
+    <CloseApplicationAtEnd>true</CloseApplicationAtEnd>
+    <ForceKillOnCleanup>false</ForceKillOnCleanup>
+
+    <MaxWorkingSetGrowthMb>150</MaxWorkingSetGrowthMb>
+    <MaxHandleGrowth>250</MaxHandleGrowth>
+    <MaxThreadGrowth>40</MaxThreadGrowth>
+  </Execution>
+
+  <VoiceChecklists>
+    <Enabled>false</Enabled>
+    <Suite>Auto</Suite>
+    <PipeName>SimVoiceCopilot.QA.InternalAudio.v1</PipeName>
+    <FixtureFile>VoiceChecklists\Fixtures\SimVoice-QA-Voice-Checklist.xml</FixtureFile>
+    <BridgeTimeoutSeconds>60</BridgeTimeoutSeconds>
+    <StepTimeoutSeconds>35</StepTimeoutSeconds>
+    <PostCommandWaitMs>700</PostCommandWaitMs>
+    <PreserveFixture>false</PreserveFixture>
+  </VoiceChecklists>
+
+  <MainWindow AutomationId="MainForm"
+              Names="SimVoice Copilot 1.0.17.0 - PRO|SimVoice Copilot"
+              ControlType="Window" />
+
+  <StartupActions>
+  </StartupActions>
+
+  <!-- Stable selectors obtained from ui-tree-diagnostic.txt on SimVoice Copilot 1.0.16.0. -->
+  <Navigation>
+    <Panel Name="Voice Commands"
+           AutomationId="btnConfigurar"
+           Names="Voice Commands|Comandos de voz"
+           ControlType="Pane"
+           ExpectSecondaryWindow="true"
+           AutoCloseSecondaryWindow="true">
+    </Panel>
+
+    <Panel Name="SimVar Call-outs"
+           AutomationId="btnEditCallouts"
+           Names="SimVar Call-outs|Anuncios SimVar"
+           ControlType="Pane"
+           ExpectSecondaryWindow="true"
+           AutoCloseSecondaryWindow="true">
+    </Panel>
+
+    <Panel Name="Settings"
+           AutomationId="btnVoiceSettings"
+           Names="Settings|Configuración"
+           ControlType="Pane"
+           ExpectSecondaryWindow="true"
+           AutoCloseSecondaryWindow="true">
+    </Panel>
+
+    <Panel Name="Keyboard Settings"
+           AutomationId="btnKeyboardSettings"
+           Names="Keyboard Settings|Configuración de teclado"
+           ControlType="Pane"
+           ExpectSecondaryWindow="true"
+           AutoCloseSecondaryWindow="true">
+    </Panel>
+
+    <Panel Name="Checklist tab"
+           AutomationId="btnPestanaChecklist"
+           Names="Checklist"
+           ControlType="Button"
+           ExpectSecondaryWindow="false"
+           AutoCloseSecondaryWindow="false">
+    </Panel>
+
+    <Panel Name="Feedback tab"
+           AutomationId="btnPestanaFeedback"
+           Names="Feedback|Comentarios"
+           ControlType="Button"
+           ExpectSecondaryWindow="false"
+           AutoCloseSecondaryWindow="false">
+    </Panel>
+
+    <Panel Name="Commands tab"
+           AutomationId="btnPestanaComandos"
+           Names="Commands|Comandos"
+           ControlType="Button"
+           ExpectSecondaryWindow="false"
+           AutoCloseSecondaryWindow="false">
+    </Panel>
+  </Navigation>
+
+  <CloseAction AutomationId="Close" Names="Cerrar|Close" ControlType="Button" />
+</QaConfiguration>

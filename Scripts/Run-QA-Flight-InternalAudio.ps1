@@ -1,0 +1,1038 @@
+﻿[CmdletBinding()]
+param(
+    [ValidateSet("SmokeInternalEN", "CoreInternalEN", "SmokeInternalES", "CoreInternalES")]
+    [string]$Suite = "SmokeInternalEN",
+
+    [string]$AppNamePattern = "*SimVoice*",
+    [string]$AppIdPattern = "*",
+    [string]$ProcessName = "SimVoiceCopilotApp",
+    [string]$SimConnectDll = "",
+    [string]$OutputDirectory = "",
+
+    [ValidateRange(10, 180)]
+    [int]$ConnectionTimeoutSeconds = 60,
+
+    [ValidateRange(1, 5)]
+    [int]$MaxAttempts = 2,
+
+    [switch]$SkipAppLaunch,
+    [switch]$CloseAppAtEnd,
+    [switch]$NoBuild,
+
+    # Final pre-certification runs stop after the first command that still fails
+    # after all configured attempts. Use this switch only when collecting a full
+    # failure matrix is more useful than a fast diagnostic.
+    [switch]$ContinueAfterFailure
+)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+$projectRoot = Split-Path -Parent $PSScriptRoot
+$oracleScript = Join-Path $PSScriptRoot "Run-QA-SimConnect-Oracle.ps1"
+$catalogPath = Join-Path $projectRoot "FlightFunctional\internal-audio-test-cases.json"
+$runStarted = Get-Date
+$runStamp = $runStarted.ToString("yyyyMMdd-HHmmss")
+
+if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
+    $OutputDirectory = Join-Path $projectRoot ("QA-Runs\FlightInternalAudio\INTERNAL-{0}-{1}" -f $runStamp, $Suite)
+}
+
+New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
+$oracleRoot = Join-Path $OutputDirectory "oracle"
+$feedbackOutput = Join-Path $OutputDirectory "app-feedback-logs"
+New-Item -ItemType Directory -Path $oracleRoot -Force | Out-Null
+New-Item -ItemType Directory -Path $feedbackOutput -Force | Out-Null
+$runLog = Join-Path $OutputDirectory "internal-audio-run.log"
+$pipeName = "SimVoiceCopilot.QA.InternalAudio.v1"
+
+function Write-RunLog {
+    param(
+        [string]$Message,
+        [ValidateSet("INFO", "WARN", "ERROR")]
+        [string]$Level = "INFO"
+    )
+
+    $line = "{0} [{1}] {2}" -f (Get-Date).ToString("yyyy-MM-dd HH:mm:ss.fff zzz"), $Level, $Message
+    Add-Content -LiteralPath $runLog -Value $line -Encoding UTF8
+    if ($Level -eq "ERROR") {
+        Write-Host $line -ForegroundColor Red
+    }
+    elseif ($Level -eq "WARN") {
+        Write-Host $line -ForegroundColor Yellow
+    }
+    else {
+        Write-Host $line
+    }
+}
+
+function Invoke-InternalAudioRequest {
+    param(
+        [ValidateSet("ping", "synthesize")]
+        [string]$Action,
+        [string]$Text = "",
+        [string]$Language = "",
+        [int]$TimeoutMs = 30000,
+        [int]$SpeechRate = 0,
+        [string]$CorrelationId = ""
+    )
+
+    if ([string]::IsNullOrWhiteSpace($CorrelationId)) {
+        $CorrelationId = [guid]::NewGuid().ToString("N")
+    }
+
+    $pipe = $null
+    $reader = $null
+    $writer = $null
+    try {
+        $pipe = [System.IO.Pipes.NamedPipeClientStream]::new(
+            ".",
+            $pipeName,
+            [System.IO.Pipes.PipeDirection]::InOut,
+            [System.IO.Pipes.PipeOptions]::Asynchronous)
+        $pipe.Connect([Math]::Max(1000, [Math]::Min(30000, $TimeoutMs)))
+
+        $utf8 = [System.Text.UTF8Encoding]::new($false)
+        $reader = [System.IO.StreamReader]::new($pipe, $utf8, $false, 65536, $true)
+        $writer = [System.IO.StreamWriter]::new($pipe, $utf8, 65536, $true)
+        $writer.AutoFlush = $true
+
+        $request = [ordered]@{
+            ProtocolVersion = 1
+            Action = $Action
+            CorrelationId = $CorrelationId
+            Text = $Text
+            Language = $Language
+            TimeoutMs = $TimeoutMs
+            SpeechRate = $SpeechRate
+        }
+        $writer.WriteLine(($request | ConvertTo-Json -Compress))
+
+        $readTask = $reader.ReadLineAsync()
+        if (-not $readTask.Wait([Math]::Max(3000, $TimeoutMs + 10000))) {
+            throw "Timed out waiting for the Internal Audio QA bridge response."
+        }
+
+        $line = $readTask.Result
+        if ([string]::IsNullOrWhiteSpace($line)) {
+            throw "Internal Audio QA bridge returned an empty response."
+        }
+
+        return $line | ConvertFrom-Json
+    }
+    finally {
+        if ($writer) { try { $writer.Dispose() } catch { } }
+        if ($reader) { try { $reader.Dispose() } catch { } }
+        if ($pipe) { try { $pipe.Dispose() } catch { } }
+    }
+}
+
+function Wait-InternalAudioBridge {
+    param(
+        [string]$ExpectedLanguage,
+        [int]$TimeoutSeconds
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    $lastError = ""
+    do {
+        try {
+            $response = Invoke-InternalAudioRequest -Action ping -TimeoutMs 3000
+            if ($null -ne $response -and [bool]$response.Success) {
+                $configuredLanguage = [string]$response.VoiceLanguage
+                if (-not [string]::IsNullOrWhiteSpace($ExpectedLanguage) -and
+                    -not [string]::IsNullOrWhiteSpace($configuredLanguage) -and
+                    -not $configuredLanguage.StartsWith($ExpectedLanguage.Substring(0, 2), [StringComparison]::OrdinalIgnoreCase)) {
+                    throw ("SimVoice voice-recognition language is '{0}', but suite '{1}' requires '{2}'. Change Voice Settings and restart the QA package." -f $configuredLanguage, $Suite, $ExpectedLanguage)
+                }
+                return $response
+            }
+            $lastError = if ($null -ne $response) { [string]$response.Error } else { "No response" }
+        }
+        catch {
+            $lastError = $_.Exception.Message
+        }
+        Start-Sleep -Milliseconds 500
+    } while ((Get-Date) -lt $deadline)
+
+    throw ("Internal Audio QA bridge was not ready within {0} seconds. Last error: {1}. Confirm that the installed app title includes '[QA Internal Audio]'." -f $TimeoutSeconds, $lastError)
+}
+
+function Get-WindowsPowerShell {
+    $candidate = Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe"
+    if (Test-Path -LiteralPath $candidate) { return $candidate }
+    $command = Get-Command powershell.exe -ErrorAction SilentlyContinue
+    if ($null -ne $command) { return $command.Source }
+    throw "Windows PowerShell 5.1 was not found."
+}
+
+function Get-OracleArguments {
+    param(
+        [string]$Mode,
+        [string]$Directory,
+        [string]$Variable = "",
+        [string]$Expected = "",
+        [double]$Tolerance = 0,
+        [int]$TimeoutSeconds = 30,
+        [int]$IntervalMs = 250,
+        [switch]$UseNoBuild
+    )
+
+    $arguments = @(
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", $oracleScript,
+        "-Mode", $Mode,
+        "-OutputDirectory", $Directory,
+        "-TimeoutSeconds", $TimeoutSeconds,
+        "-IntervalMs", $IntervalMs
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($Variable)) {
+        $arguments += @("-Variable", $Variable, "-Expected", $Expected, "-Tolerance", $Tolerance)
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($SimConnectDll)) {
+        $arguments += @("-SimConnectDll", $SimConnectDll)
+    }
+
+    if ($UseNoBuild) { $arguments += "-NoBuild" }
+    return $arguments
+}
+
+function Invoke-OracleSync {
+    param(
+        [string]$Mode,
+        [string]$Directory,
+        [string]$Variable = "",
+        [string]$Expected = "",
+        [double]$Tolerance = 0,
+        [int]$TimeoutSeconds = 30,
+        [int]$IntervalMs = 250,
+        [switch]$UseNoBuild
+    )
+
+    New-Item -ItemType Directory -Path $Directory -Force | Out-Null
+    $powershellExe = Get-WindowsPowerShell
+    $arguments = Get-OracleArguments -Mode $Mode -Directory $Directory -Variable $Variable -Expected $Expected -Tolerance $Tolerance -TimeoutSeconds $TimeoutSeconds -IntervalMs $IntervalMs -UseNoBuild:$UseNoBuild
+    $argumentString = ($arguments | ForEach-Object { Quote-ProcessArgument ([string]$_) }) -join " "
+    $stdout = Join-Path $Directory "oracle-sync-console-out.log"
+    $stderr = Join-Path $Directory "oracle-sync-console-error.log"
+
+    # Do not execute the child PowerShell directly in this pipeline. Native
+    # stderr records can become terminating RemoteException/NativeCommandError
+    # objects under $ErrorActionPreference='Stop', aborting the entire suite.
+    $process = Start-Process -FilePath $powershellExe `
+        -ArgumentList $argumentString `
+        -RedirectStandardOutput $stdout `
+        -RedirectStandardError $stderr `
+        -WindowStyle Hidden `
+        -PassThru
+
+    $process.WaitForExit()
+    $code = [int]$process.ExitCode
+    $process.Dispose()
+
+    if (Test-Path -LiteralPath $stdout) {
+        Get-Content -LiteralPath $stdout -ErrorAction SilentlyContinue |
+            ForEach-Object { Write-Host ([string]$_) }
+    }
+    if (Test-Path -LiteralPath $stderr) {
+        Get-Content -LiteralPath $stderr -ErrorAction SilentlyContinue |
+            ForEach-Object { Write-Host ([string]$_) -ForegroundColor DarkYellow }
+    }
+
+    return [pscustomobject][ordered]@{
+        ExitCode = $code
+        Directory = $Directory
+        ReportPath = Join-Path $Directory "oracle-report.json"
+    }
+}
+
+function Quote-ProcessArgument {
+    param([string]$Value)
+    if ($null -eq $Value) { return '""' }
+    return '"' + $Value.Replace('"', '\"') + '"'
+}
+
+function Start-OracleWait {
+    param(
+        [string]$Directory,
+        [string]$Variable,
+        [string]$Expected,
+        [double]$Tolerance,
+        [int]$TimeoutSeconds
+    )
+
+    New-Item -ItemType Directory -Path $Directory -Force | Out-Null
+    $powershellExe = Get-WindowsPowerShell
+    $arguments = Get-OracleArguments -Mode "Wait" -Directory $Directory -Variable $Variable -Expected $Expected -Tolerance $Tolerance -TimeoutSeconds $TimeoutSeconds -IntervalMs 250 -UseNoBuild
+    $argumentString = ($arguments | ForEach-Object { Quote-ProcessArgument ([string]$_) }) -join " "
+    $stdout = Join-Path $Directory "oracle-console-out.log"
+    $stderr = Join-Path $Directory "oracle-console-error.log"
+
+    $process = Start-Process -FilePath $powershellExe `
+        -ArgumentList $argumentString `
+        -RedirectStandardOutput $stdout `
+        -RedirectStandardError $stderr `
+        -WindowStyle Hidden `
+        -PassThru
+
+    return [pscustomobject]@{
+        Process = $process
+        Directory = $Directory
+        ReportPath = Join-Path $Directory "oracle-report.json"
+        StandardOutput = $stdout
+        StandardError = $stderr
+    }
+}
+
+function Read-OracleReport {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path)) { return $null }
+    return Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
+}
+
+function Get-SnapshotObservedValue {
+    param(
+        [object]$Snapshot,
+        [string]$Variable
+    )
+
+    $propertyMap = @{
+        "HeadingBug" = "HeadingBugDegrees"
+        "SelectedAltitude" = "SelectedAltitudeFeet"
+        "SelectedVerticalSpeed" = "SelectedVerticalSpeedFpm"
+        "Transponder" = "TransponderCode"
+        "AutopilotMaster" = "AutopilotMaster"
+        "HeadingHold" = "HeadingHold"
+        "AltitudeHold" = "AltitudeHold"
+        "VerticalSpeedHold" = "VerticalSpeedHold"
+        "ParkingBrake" = "ParkingBrake"
+        "GearHandle" = "GearHandlePosition"
+        "FlapsHandleIndex" = "FlapsHandleIndex"
+    }
+
+    if (-not $propertyMap.ContainsKey($Variable)) {
+        throw "The functional runner does not have a snapshot property mapping for '$Variable'."
+    }
+
+    $propertyName = $propertyMap[$Variable]
+    $property = $Snapshot.PSObject.Properties[$propertyName]
+    if ($null -eq $property) {
+        throw "Oracle snapshot property '$propertyName' was not found for variable '$Variable'."
+    }
+
+    return $property.Value
+}
+
+function Get-NumericDifference {
+    param(
+        [string]$Variable,
+        [double]$Observed,
+        [double]$Expected
+    )
+
+    if ($Variable -eq "HeadingBug") {
+        $a = (($Observed % 360) + 360) % 360
+        $b = (($Expected % 360) + 360) % 360
+        $difference = [Math]::Abs($a - $b)
+        return [Math]::Min($difference, 360 - $difference)
+    }
+
+    return [Math]::Abs($Observed - $Expected)
+}
+
+function Select-TestVariant {
+    param(
+        [object]$Test,
+        [object]$Observed
+    )
+
+    foreach ($variant in @($Test.variants)) {
+        $expected = [double]::Parse([string]$variant.expected, [Globalization.CultureInfo]::InvariantCulture)
+        $observedNumber = [Convert]::ToDouble($Observed, [Globalization.CultureInfo]::InvariantCulture)
+        $difference = Get-NumericDifference -Variable ([string]$Test.variable) -Observed $observedNumber -Expected $expected
+        if ($difference -gt ([double]$Test.tolerance)) {
+            return $variant
+        }
+    }
+
+    return $null
+}
+
+function Get-TestSpeechRate {
+    param(
+        [object]$Test,
+        [int]$Attempt
+    )
+
+    $property = $Test.PSObject.Properties["speechRates"]
+    if ($null -ne $property) {
+        $rates = @($property.Value)
+        if ($rates.Count -gt 0) {
+            $index = [Math]::Min([Math]::Max(0, $Attempt - 1), $rates.Count - 1)
+            return [int]$rates[$index]
+        }
+    }
+
+    if ($Attempt -le 1) { return 0 }
+    return -2
+}
+
+function Stop-And-WaitProcess {
+    param([System.Diagnostics.Process]$Process)
+
+    if ($null -eq $Process) { return }
+    try {
+        $Process.Refresh()
+        if (-not $Process.HasExited) {
+            Stop-Process -Id $Process.Id -Force -ErrorAction SilentlyContinue
+            [void]$Process.WaitForExit(5000)
+        }
+    }
+    catch { }
+}
+
+function Find-SimVoiceApp {
+    $apps = @(Get-StartApps | Where-Object { $_.Name -like $AppNamePattern -and $_.AppID -like $AppIdPattern })
+    if ($apps.Count -eq 0) {
+        throw "No installed Start app matched name '$AppNamePattern' and AppID '$AppIdPattern'."
+    }
+    if ($apps.Count -gt 1) {
+        $names = ($apps | ForEach-Object { "{0} [{1}]" -f $_.Name, $_.AppID }) -join "; "
+        throw "More than one installed app matched name '$AppNamePattern' and AppID '$AppIdPattern': $names. Use exact patterns."
+    }
+    return $apps[0]
+}
+
+function Wait-SimVoiceProcess {
+    param([int]$TimeoutSeconds)
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    do {
+        $process = Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($null -ne $process) {
+            $process.Refresh()
+            if ($process.MainWindowHandle -ne 0) { return $process }
+        }
+        Start-Sleep -Milliseconds 500
+    } while ((Get-Date) -lt $deadline)
+
+    throw "The process '$ProcessName' did not expose a main window within $TimeoutSeconds seconds."
+}
+
+function Get-UiElementName {
+    param(
+        [System.Diagnostics.Process]$Process,
+        [string]$AutomationId
+    )
+
+    try {
+        $Process.Refresh()
+        if ($Process.MainWindowHandle -ne 0) {
+            $root = [System.Windows.Automation.AutomationElement]::FromHandle($Process.MainWindowHandle)
+            if ($null -ne $root) {
+                $condition = [System.Windows.Automation.PropertyCondition]::new(
+                    [System.Windows.Automation.AutomationElement]::AutomationIdProperty,
+                    $AutomationId)
+                $element = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition)
+                if ($null -ne $element -and -not [string]::IsNullOrWhiteSpace([string]$element.Current.Name)) {
+                    return [string]$element.Current.Name
+                }
+            }
+        }
+
+        # Packaged WinForms applications can expose a valid main HWND while UI Automation
+        # does not return descendants from AutomationElement.FromHandle(). Search the
+        # desktop tree by process id as a second UIA strategy.
+        $processCondition = [System.Windows.Automation.PropertyCondition]::new(
+            [System.Windows.Automation.AutomationElement]::ProcessIdProperty,
+            $Process.Id)
+        $automationCondition = [System.Windows.Automation.PropertyCondition]::new(
+            [System.Windows.Automation.AutomationElement]::AutomationIdProperty,
+            $AutomationId)
+        $combined = [System.Windows.Automation.AndCondition]::new($processCondition, $automationCondition)
+        $desktopElement = [System.Windows.Automation.AutomationElement]::RootElement.FindFirst(
+            [System.Windows.Automation.TreeScope]::Descendants,
+            $combined)
+        if ($null -ne $desktopElement) {
+            return [string]$desktopElement.Current.Name
+        }
+    }
+    catch {
+        return ""
+    }
+
+    return ""
+}
+
+function Get-NativeSimVoiceStatus {
+    param([System.Diagnostics.Process]$Process)
+
+    try {
+        $Process.Refresh()
+        if ($Process.MainWindowHandle -eq 0) { return "" }
+        $texts = [SimVoiceQa.NativeWindowTextReader]::GetDescendantTexts($Process.MainWindowHandle)
+        foreach ($text in $texts) {
+            if ([string]::IsNullOrWhiteSpace($text)) { continue }
+            if ($text -match '(?i)flight\s+simulator|simulador') {
+                return [string]$text
+            }
+        }
+    }
+    catch {
+        return ""
+    }
+
+    return ""
+}
+
+function Get-SimVoiceStatus {
+    param([System.Diagnostics.Process]$Process)
+
+    $uiaStatus = Get-UiElementName -Process $Process -AutomationId "lblSimConnectStatus"
+    if (-not [string]::IsNullOrWhiteSpace($uiaStatus)) {
+        return [pscustomobject]@{ Text = $uiaStatus; Source = "UIAutomation" }
+    }
+
+    $nativeStatus = Get-NativeSimVoiceStatus -Process $Process
+    if (-not [string]::IsNullOrWhiteSpace($nativeStatus)) {
+        return [pscustomobject]@{ Text = $nativeStatus; Source = "Win32" }
+    }
+
+    return [pscustomobject]@{ Text = ""; Source = "Unavailable" }
+}
+
+function Wait-SimVoiceConnected {
+    param(
+        [System.Diagnostics.Process]$Process,
+        [int]$TimeoutSeconds
+    )
+
+    $started = Get-Date
+    $deadline = $started.AddSeconds($TimeoutSeconds)
+    $unavailableFallbackAt = $started.AddSeconds([Math]::Min(12, $TimeoutSeconds))
+    $lastStatus = ""
+    $lastSource = "Unavailable"
+    $everReadStatus = $false
+
+    do {
+        $Process.Refresh()
+        if ($Process.HasExited) { throw "SimVoice Copilot exited while waiting for SimConnect." }
+
+        $status = Get-SimVoiceStatus -Process $Process
+        $lastStatus = [string]$status.Text
+        $lastSource = [string]$status.Source
+        if (-not [string]::IsNullOrWhiteSpace($lastStatus)) {
+            $everReadStatus = $true
+            $isDisconnected = $lastStatus -match '(?i)not\s+connected|no\s+conectado|desconectado|connecting|conectando'
+            $isConnected = $lastStatus -match '(?i)(flight\s+simulator|simulador).*(:|-)\s*(connected|conectado)(?:\s+to|\b)'
+            if ($isConnected -and -not $isDisconnected) {
+                return [pscustomobject]@{
+                    Text = $lastStatus
+                    Source = $lastSource
+                    Verified = $true
+                }
+            }
+        }
+        elseif (-not $everReadStatus -and (Get-Date) -ge $unavailableFallbackAt) {
+            # UI text is useful evidence but not the oracle of truth. Some MSIX/WinForms
+            # combinations do not expose label text to an external process. Continue and
+            # let the independent SimConnect Oracle plus the actual command result prove
+            # end-to-end connectivity instead of producing a false infrastructure FAIL.
+            return [pscustomobject]@{
+                Text = "Status text unavailable; connectivity will be validated by the independent Oracle and command outcomes."
+                Source = "OracleFallback"
+                Verified = $false
+            }
+        }
+
+        Start-Sleep -Milliseconds 750
+    } while ((Get-Date) -lt $deadline)
+
+    if (-not $everReadStatus) {
+        return [pscustomobject]@{
+            Text = "Status text unavailable; connectivity will be validated by the independent Oracle and command outcomes."
+            Source = "OracleFallback"
+            Verified = $false
+        }
+    }
+
+    throw "SimVoice Copilot did not report a connected simulator within $TimeoutSeconds seconds. Last status from ${lastSource}: '$lastStatus'."
+}
+
+function Copy-FeedbackLogs {
+    param([datetime]$Since)
+    $logRoot = Join-Path $env:LOCALAPPDATA "SimVoiceCopilot\Logs"
+    if (-not (Test-Path -LiteralPath $logRoot)) { return }
+
+    Get-ChildItem -LiteralPath $logRoot -Filter "feedback-*.jsonl" -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -ge $Since.AddMinutes(-1) } |
+        ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $feedbackOutput $_.Name) -Force
+        }
+}
+
+function HtmlEncode {
+    param([object]$Value)
+    return [System.Net.WebUtility]::HtmlEncode([Convert]::ToString($Value, [Globalization.CultureInfo]::InvariantCulture))
+}
+
+function Write-FunctionalReports {
+    param(
+        [object[]]$Results,
+        [bool]$Success,
+        [string]$AppDisplayName,
+        [string]$AppId,
+        [string]$ConnectedStatus
+    )
+
+    $finished = Get-Date
+    $report = [ordered]@{
+        RunId = "FLIGHT-$runStamp-$Suite"
+        Suite = $Suite
+        StartedAtLocal = $runStarted.ToString("o")
+        FinishedAtLocal = $finished.ToString("o")
+        MachineName = $env:COMPUTERNAME
+        UserName = $env:USERNAME
+        AppDisplayName = $AppDisplayName
+        AppId = $AppId
+        ProcessName = $ProcessName
+        SimVoiceConnectedStatus = $ConnectedStatus
+        Success = $Success
+        Passed = @($Results | Where-Object { $_.Passed }).Count
+        Failed = @($Results | Where-Object { -not $_.Passed }).Count
+        Results = $Results
+    }
+
+    $jsonPath = Join-Path $OutputDirectory "functional-results.json"
+    $csvPath = Join-Path $OutputDirectory "command-results.csv"
+    $htmlPath = Join-Path $OutputDirectory "functional-report.html"
+
+    $report | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $jsonPath -Encoding UTF8
+    $Results | Select-Object TestId, Suite, Language, Phrase, RecognizedText, CommandFeedback, SynthesizerVoice, SpeechRate, Variable, Before, Expected, Observed, Tolerance, Attempts, InjectionElapsedMs, LatencySeconds, Passed, Message, OracleDirectory |
+        Export-Csv -LiteralPath $csvPath -NoTypeInformation -Encoding UTF8
+
+    $resultClass = if ($Success) { "pass" } else { "fail" }
+    $resultText = if ($Success) { "PASS" } else { "FAIL" }
+    $rows = New-Object Text.StringBuilder
+    foreach ($item in $Results) {
+        $rowClass = if ($item.Passed) { "pass" } else { "fail" }
+        [void]$rows.Append("<tr><td>").Append((HtmlEncode $item.TestId)).Append("</td><td>")
+        [void]$rows.Append((HtmlEncode $item.Phrase)).Append("</td><td>")
+        [void]$rows.Append((HtmlEncode $item.RecognizedText)).Append("</td><td>")
+        [void]$rows.Append((HtmlEncode $item.CommandFeedback)).Append("</td><td>")
+        [void]$rows.Append((HtmlEncode $item.SynthesizerVoice)).Append("</td><td>")
+        [void]$rows.Append((HtmlEncode $item.Variable)).Append("</td><td>")
+        [void]$rows.Append((HtmlEncode $item.Before)).Append("</td><td>")
+        [void]$rows.Append((HtmlEncode $item.Expected)).Append("</td><td>")
+        [void]$rows.Append((HtmlEncode $item.Observed)).Append("</td><td>")
+        [void]$rows.Append((HtmlEncode $item.InjectionElapsedMs)).Append("</td><td>")
+        [void]$rows.Append((HtmlEncode $item.LatencySeconds)).Append("</td><td class='").Append($rowClass).Append("'>")
+        $itemResultText = if ($item.Passed) { "PASS" } else { "FAIL" }
+        [void]$rows.Append($itemResultText).Append("</td><td>")
+        [void]$rows.Append((HtmlEncode $item.Message)).Append("</td></tr>")
+    }
+
+    $html = @"
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SimVoice Copilot Flight Functional QA</title>
+<style>
+body{font-family:Segoe UI,Arial;margin:28px;color:#202124}h1{margin-bottom:4px}.pass{color:#187a2f;font-weight:700}.fail{color:#b42318;font-weight:700}table{border-collapse:collapse;width:100%;margin-top:18px}th,td{border:1px solid #d0d5dd;padding:7px 9px;text-align:left;vertical-align:top}th{background:#f2f4f7}code{background:#f2f4f7;padding:2px 4px}.meta{line-height:1.55}
+</style>
+</head>
+<body>
+<h1>SimVoice Copilot — Internal Audio Flight Functional QA</h1>
+<p class="$resultClass">$resultText</p>
+<p class="meta">Suite: <code>$(HtmlEncode $Suite)</code><br>
+App: <code>$(HtmlEncode $AppDisplayName)</code><br>
+SimConnect status: <code>$(HtmlEncode $ConnectedStatus)</code><br>
+Passed: $(@($Results | Where-Object { $_.Passed }).Count) &nbsp; Failed: $(@($Results | Where-Object { -not $_.Passed }).Count)</p>
+<table>
+<thead><tr><th>Test</th><th>Synthesized phrase</th><th>Vosk recognized</th><th>Command feedback</th><th>TTS voice</th><th>Variable</th><th>Before</th><th>Expected</th><th>Observed</th><th>Injection ms</th><th>Latency s</th><th>Result</th><th>Message</th></tr></thead>
+<tbody>$($rows.ToString())</tbody>
+</table>
+</body>
+</html>
+"@
+    Set-Content -LiteralPath $htmlPath -Value $html -Encoding UTF8
+
+    return [pscustomobject]@{
+        Json = $jsonPath
+        Csv = $csvPath
+        Html = $htmlPath
+    }
+}
+
+if (-not (Test-Path -LiteralPath $oracleScript)) {
+    throw "Oracle launcher not found: $oracleScript"
+}
+if (-not (Test-Path -LiteralPath $catalogPath)) {
+    throw "Functional test catalog not found: $catalogPath"
+}
+
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+
+if (-not ("SimVoiceQa.NativeWindowTextReader" -as [type])) {
+    Add-Type -TypeDefinition @"
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Text;
+
+namespace SimVoiceQa
+{
+    public static class NativeWindowTextReader
+    {
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        private static extern bool EnumChildWindows(IntPtr hWndParent, EnumWindowsProc callback, IntPtr lParam);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int maxCount);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern int GetWindowTextLength(IntPtr hWnd);
+
+        public static string[] GetDescendantTexts(IntPtr parent)
+        {
+            var values = new List<string>();
+            if (parent == IntPtr.Zero)
+                return values.ToArray();
+
+            EnumChildWindows(parent, delegate(IntPtr hWnd, IntPtr lParam)
+            {
+                int length = GetWindowTextLength(hWnd);
+                if (length > 0)
+                {
+                    var builder = new StringBuilder(length + 1);
+                    GetWindowText(hWnd, builder, builder.Capacity);
+                    string value = builder.ToString().Trim();
+                    if (value.Length > 0)
+                        values.Add(value);
+                }
+                return true;
+            }, IntPtr.Zero);
+
+            return values.ToArray();
+        }
+    }
+}
+"@ -Language CSharp
+}
+
+Write-RunLog "SimVoice Copilot QA Phase 2.3.0 — Internal Audio End-to-End Flight Functional QA"
+Write-RunLog ("Suite: {0}" -f $Suite)
+Write-RunLog ("Output: {0}" -f $OutputDirectory)
+
+$catalog = Get-Content -LiteralPath $catalogPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$suiteProperty = $catalog.suites.PSObject.Properties[$Suite]
+if ($null -eq $suiteProperty) {
+    throw "Suite '$Suite' was not found in $catalogPath."
+}
+$tests = @($suiteProperty.Value)
+if ($tests.Count -eq 0) { throw "Suite '$Suite' contains no tests." }
+
+$app = Find-SimVoiceApp
+Write-RunLog ("Installed MSIX: {0} [{1}]" -f $app.Name, $app.AppID)
+
+$simVoiceProcess = Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($null -eq $simVoiceProcess -and -not $SkipAppLaunch) {
+    Write-RunLog "Launching installed MSIX package."
+    Start-Process "explorer.exe" ("shell:AppsFolder\{0}" -f $app.AppID)
+}
+
+$simVoiceProcess = Wait-SimVoiceProcess -TimeoutSeconds $ConnectionTimeoutSeconds
+Write-RunLog ("SimVoice process ready: PID={0}, HWND=0x{1:X}" -f $simVoiceProcess.Id, $simVoiceProcess.MainWindowHandle.ToInt64())
+
+# Establish the simulator truth first. UI Automation status text is secondary evidence
+# and must never block a valid flight-functional run when the MSIX is visibly running.
+$probeDirectory = Join-Path $oracleRoot "00-preflight-probe"
+$probe = Invoke-OracleSync -Mode "Probe" -Directory $probeDirectory -TimeoutSeconds 30 -IntervalMs 500 -UseNoBuild:$NoBuild
+if ($probe.ExitCode -ne 0) {
+    throw "Independent SimConnect Oracle preflight failed. Review: $probeDirectory"
+}
+Write-RunLog "Independent Oracle preflight: PASS"
+
+$connectedStatusResult = Wait-SimVoiceConnected -Process $simVoiceProcess -TimeoutSeconds $ConnectionTimeoutSeconds
+$connectedStatus = [string]$connectedStatusResult.Text
+if ([bool]$connectedStatusResult.Verified) {
+    Write-RunLog ("SimVoice connected status ({0}): {1}" -f $connectedStatusResult.Source, $connectedStatus)
+}
+else {
+    Write-RunLog ("SimVoice status text could not be read externally ({0}). Continuing because Oracle preflight passed; command outcomes remain authoritative." -f $connectedStatusResult.Source) "WARN"
+}
+
+$suiteLanguage = [string]$tests[0].language
+$bridgeStatus = Wait-InternalAudioBridge -ExpectedLanguage $suiteLanguage -TimeoutSeconds $ConnectionTimeoutSeconds
+Write-RunLog ("Internal audio bridge ready: pipe={0}, app={1}, configured language={2}" -f $pipeName, $bridgeStatus.AppVersion, $bridgeStatus.VoiceLanguage)
+Write-Host ""
+Write-Host "INTERNAL AUDIO PRECHECK: PASS" -ForegroundColor Green
+Write-Host ("  Voice profile/language : {0}" -f $suiteLanguage)
+Write-Host ("  Internal audio pipe    : {0}" -f $pipeName)
+Write-Host "  Microphone             : not used"
+Write-Host "  Audio source           : Windows speech synthesis -> 16 kHz PCM -> normal Vosk pipeline"
+Write-Host "  Simulator              : active flight; do not operate the tested controls manually"
+Write-Host ""
+
+$results = New-Object 'System.Collections.Generic.List[object]' 
+$aborted = $false
+$testNumber = 0
+
+foreach ($test in $tests) {
+    if ($aborted) { break }
+    try { $simVoiceProcess.Refresh() } catch { }
+    if ($simVoiceProcess.HasExited) {
+        $aborted = $true
+        Write-RunLog "SimVoice Copilot exited before the next command. The suite is aborting immediately; manual reopening cannot convert this run into PASS." "ERROR"
+        break
+    }
+    $testNumber++
+    $testId = [string]$test.id
+    $safeTestId = $testId -replace '[^A-Za-z0-9_.-]', '_'
+    $testRoot = Join-Path $oracleRoot ("{0:00}-{1}" -f $testNumber, $safeTestId)
+    $beforeDirectory = Join-Path $testRoot "before"
+
+    Write-Host ""
+    Write-Host ("[{0}/{1}] {2}" -f $testNumber, $tests.Count, $testId) -ForegroundColor Cyan
+
+    $beforeRun = Invoke-OracleSync -Mode "Snapshot" -Directory $beforeDirectory -TimeoutSeconds 20 -IntervalMs 500 -UseNoBuild
+    $beforeReport = Read-OracleReport -Path $beforeRun.ReportPath
+    if ($beforeRun.ExitCode -ne 0 -or $null -eq $beforeReport -or @($beforeReport.Snapshots).Count -eq 0) {
+        $results.Add([pscustomobject][ordered]@{
+            TestId = $testId; Suite = $Suite; Language = [string]$test.language; Phrase = "";
+            Variable = [string]$test.variable; Before = ""; Expected = ""; Observed = "";
+            Tolerance = [double]$test.tolerance; Attempts = 0; LatencySeconds = 0; Passed = $false;
+            Message = "Could not capture the pre-command Oracle snapshot."; OracleDirectory = $testRoot
+        })
+        Write-RunLog ("{0}: FAIL - pre-command snapshot unavailable" -f $testId) "ERROR"
+        continue
+    }
+
+    $beforeSnapshot = @($beforeReport.Snapshots)[-1]
+    $beforeObserved = Get-SnapshotObservedValue -Snapshot $beforeSnapshot -Variable ([string]$test.variable)
+    $variant = Select-TestVariant -Test $test -Observed $beforeObserved
+
+    if ($null -eq $variant) {
+        $results.Add([pscustomobject][ordered]@{
+            TestId = $testId; Suite = $Suite; Language = [string]$test.language; Phrase = "";
+            Variable = [string]$test.variable; Before = [string]$beforeObserved; Expected = ""; Observed = [string]$beforeObserved;
+            Tolerance = [double]$test.tolerance; Attempts = 0; LatencySeconds = 0; Passed = $false;
+            Message = "All configured target variants already matched the current simulator value; no valid precondition was available."; OracleDirectory = $testRoot
+        })
+        Write-RunLog ("{0}: FAIL - no target differs from current value {1}" -f $testId, $beforeObserved) "ERROR"
+        continue
+    }
+
+    $phrase = [string]$variant.phrase
+    $expected = [string]$variant.expected
+    $attempt = 0
+    $passed = $false
+    $observed = ""
+    $message = ""
+    $latency = 0.0
+    $lastAttemptDirectory = ""
+    $recognizedText = ""
+    $commandFeedback = ""
+    $synthesizerVoice = ""
+    $injectionElapsedMs = 0
+    $speechRate = 0
+
+    while (-not $passed -and $attempt -lt $MaxAttempts) {
+        $attempt++
+
+        if ($attempt -gt 1) {
+            $retryBeforeDirectory = Join-Path $testRoot ("before-retry-{0}" -f $attempt)
+            $retryBeforeRun = Invoke-OracleSync -Mode "Snapshot" -Directory $retryBeforeDirectory -TimeoutSeconds 20 -IntervalMs 500 -UseNoBuild
+            $retryBeforeReport = Read-OracleReport -Path $retryBeforeRun.ReportPath
+            if ($retryBeforeRun.ExitCode -eq 0 -and $null -ne $retryBeforeReport -and @($retryBeforeReport.Snapshots).Count -gt 0) {
+                $retrySnapshot = @($retryBeforeReport.Snapshots)[-1]
+                $beforeObserved = Get-SnapshotObservedValue -Snapshot $retrySnapshot -Variable ([string]$test.variable)
+                $retryVariant = Select-TestVariant -Test $test -Observed $beforeObserved
+                if ($null -ne $retryVariant) {
+                    $variant = $retryVariant
+                    $phrase = [string]$variant.phrase
+                    $expected = [string]$variant.expected
+                }
+            }
+        }
+
+        $attemptDirectory = Join-Path $testRoot ("attempt-{0}" -f $attempt)
+        $lastAttemptDirectory = $attemptDirectory
+        $speechRate = Get-TestSpeechRate -Test $test -Attempt $attempt
+
+        Write-Host ("Variable : {0}" -f $test.variable) -ForegroundColor DarkGray
+        Write-Host ("Before   : {0}" -f $beforeObserved) -ForegroundColor DarkGray
+        Write-Host ("Expected : {0} (tolerance {1})" -f $expected, $test.tolerance) -ForegroundColor DarkGray
+        Write-Host ("Audio    : internally synthesize '{0}' (speech rate {1})" -f $phrase, $speechRate) -ForegroundColor Yellow
+
+        $recognizedText = ""
+        $commandFeedback = ""
+        $synthesizerVoice = ""
+        $injectionElapsedMs = 0
+        $injectionError = ""
+
+        $wait = Start-OracleWait -Directory $attemptDirectory -Variable ([string]$test.variable) -Expected $expected -Tolerance ([double]$test.tolerance) -TimeoutSeconds ([int]$test.timeoutSeconds)
+        Start-Sleep -Milliseconds 500
+        $injectionStarted = Get-Date
+        try {
+            $injection = Invoke-InternalAudioRequest `
+                -Action synthesize `
+                -Text $phrase `
+                -Language ([string]$test.language) `
+                -SpeechRate $speechRate `
+                -TimeoutMs (([int]$test.timeoutSeconds * 1000) + 10000) `
+                -CorrelationId ("{0}-{1}" -f $testId, $attempt)
+
+            $recognizedText = [string]$injection.RecognizedText
+            $commandFeedback = [string]$injection.CommandFeedback
+            $synthesizerVoice = [string]$injection.SynthesizerVoice
+            $injectionElapsedMs = [int64]$injection.ElapsedMs
+            if (-not [bool]$injection.Success) {
+                $injectionError = [string]$injection.Error
+            }
+            Write-Host ("Recognized: {0}" -f $recognizedText) -ForegroundColor Cyan
+            Write-Host ("Feedback  : {0}" -f $commandFeedback) -ForegroundColor DarkGray
+            Write-Host ("TTS voice : {0}" -f $synthesizerVoice) -ForegroundColor DarkGray
+        }
+        catch {
+            $injectionError = $_.Exception.Message
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($injectionError)) {
+            Stop-And-WaitProcess -Process $wait.Process
+            try { $wait.Process.Dispose() } catch { }
+            try { $simVoiceProcess.Refresh() } catch { }
+            if ($simVoiceProcess.HasExited) {
+                $message = "SimVoice Copilot crashed or exited during internal audio injection: $injectionError"
+                $aborted = $true
+            }
+            else {
+                $message = "Internal audio injection failed: $injectionError"
+            }
+            $passed = $false
+        }
+        else {
+            $hardDeadline = (Get-Date).AddSeconds(([int]$test.timeoutSeconds + 20))
+            while (-not $wait.Process.HasExited -and (Get-Date) -lt $hardDeadline) {
+                Start-Sleep -Milliseconds 250
+                $wait.Process.Refresh()
+                if ($simVoiceProcess.HasExited) {
+                    Stop-And-WaitProcess -Process $wait.Process
+                    break
+                }
+            }
+
+            if (-not $wait.Process.HasExited) {
+                Stop-And-WaitProcess -Process $wait.Process
+                try { $wait.Process.Dispose() } catch { }
+                $message = "Oracle wait subprocess exceeded its hard timeout."
+                $passed = $false
+            }
+            elseif ($simVoiceProcess.HasExited) {
+                try { $wait.Process.Dispose() } catch { }
+                $message = "SimVoice Copilot exited during the command test. The suite is aborting immediately."
+                $passed = $false
+                $aborted = $true
+            }
+            else {
+                $wait.Process.WaitForExit()
+                $latency = [Math]::Round(((Get-Date) - $injectionStarted).TotalSeconds, 3)
+                $attemptReport = Read-OracleReport -Path $wait.ReportPath
+                try { $wait.Process.Dispose() } catch { }
+                if ($null -ne $attemptReport -and $null -ne $attemptReport.Assertion) {
+                    $observed = [string]$attemptReport.Assertion.Observed
+                    $message = [string]$attemptReport.Message
+                    $passed = [bool]$attemptReport.Success
+                }
+                else {
+                    $message = "Oracle did not generate a valid assertion report."
+                    $passed = $false
+                }
+            }
+        }
+
+        if ($passed) {
+            Write-Host ("PASS: observed {0} in {1} seconds" -f $observed, $latency) -ForegroundColor Green
+            Write-RunLog ("{0}: PASS phrase='{1}' before={2} expected={3} observed={4} latency={5}s attempt={6} speechRate={7}" -f $testId, $phrase, $beforeObserved, $expected, $observed, $latency, $attempt, $speechRate)
+        }
+        else {
+            Write-Host ("FAIL: {0}" -f $message) -ForegroundColor Red
+            Write-RunLog ("{0}: FAIL phrase='{1}' before={2} expected={3} observed={4} attempt={5} speechRate={6}: {7}" -f $testId, $phrase, $beforeObserved, $expected, $observed, $attempt, $speechRate, $message) "ERROR"
+
+            if (-not $aborted -and $attempt -lt $MaxAttempts) {
+                Write-Host "Retrying automatically with a fresh Oracle snapshot..." -ForegroundColor Yellow
+                Start-Sleep -Seconds 2
+            }
+        }
+    }
+
+    $results.Add([pscustomobject][ordered]@{
+        TestId = $testId
+        Suite = $Suite
+        Language = [string]$test.language
+        Phrase = $phrase
+        Variable = [string]$test.variable
+        Before = [string]$beforeObserved
+        Expected = $expected
+        Observed = $observed
+        Tolerance = [double]$test.tolerance
+        Attempts = $attempt
+        LatencySeconds = $latency
+        InjectionElapsedMs = $injectionElapsedMs
+        SpeechRate = $speechRate
+        RecognizedText = $recognizedText
+        CommandFeedback = $commandFeedback
+        SynthesizerVoice = $synthesizerVoice
+        Passed = $passed
+        Message = $message
+        OracleDirectory = $lastAttemptDirectory
+    })
+
+    if ($aborted) {
+        Write-Host "ABORTED: SimVoice Copilot exited. Remaining command cases were not executed." -ForegroundColor Red
+        break
+    }
+
+    if (-not $passed -and -not $ContinueAfterFailure) {
+        Write-RunLog ("FAIL-FAST: stopping after {0}. Use -ContinueAfterFailure to collect the complete failure matrix." -f $testId) "ERROR"
+        Write-Host "FAIL-FAST: remaining command cases were not executed." -ForegroundColor Red
+        break
+    }
+}
+
+Copy-FeedbackLogs -Since $runStarted
+
+$overallSuccess = (-not $aborted) -and ($results.Count -eq $tests.Count) -and (@($results | Where-Object { -not $_.Passed }).Count -eq 0)
+$resultArray = @($results | ForEach-Object { $_ })
+$reports = Write-FunctionalReports -Results $resultArray -Success $overallSuccess -AppDisplayName ([string]$app.Name) -AppId ([string]$app.AppID) -ConnectedStatus $connectedStatus
+
+if ($CloseAppAtEnd -and $null -ne $simVoiceProcess -and -not $simVoiceProcess.HasExited) {
+    Write-RunLog "Closing SimVoice Copilot because -CloseAppAtEnd was specified."
+    try {
+        $simVoiceProcess.CloseMainWindow() | Out-Null
+        if (-not $simVoiceProcess.WaitForExit(10000)) {
+            Stop-Process -Id $simVoiceProcess.Id -Force -ErrorAction SilentlyContinue
+        }
+    }
+    catch {
+        Write-RunLog ("Could not close SimVoice Copilot cleanly: {0}" -f $_.Exception.Message) "WARN"
+    }
+}
+
+Write-Host ""
+$overallText = if ($overallSuccess) { "INTERNAL AUDIO FUNCTIONAL RESULT: PASS" } else { "INTERNAL AUDIO FUNCTIONAL RESULT: FAIL" }
+$overallColor = if ($overallSuccess) { "Green" } else { "Red" }
+Write-Host $overallText -ForegroundColor $overallColor
+Write-Host ("Results: {0}" -f $OutputDirectory)
+Write-Host ("HTML   : {0}" -f $reports.Html)
+Write-Host ("JSON   : {0}" -f $reports.Json)
+Write-Host ("CSV    : {0}" -f $reports.Csv)
+
+if ($overallSuccess) { exit 0 }
+exit 1

@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <AssemblyName>SimVoiceCopilot.QA.SimConnectOracle</AssemblyName>
+    <RootNamespace>SimVoiceCopilot.QA.SimConnectOracle</RootNamespace>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <Deterministic>true</Deterministic>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="Microsoft.FlightSimulator.SimConnect">
+      <HintPath>$(SimConnectManagedPath)</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="ValidateSimConnectReference" BeforeTargets="ResolveReferences">
+    <Error Condition="'$(SimConnectManagedPath)' == ''"
+           Text="SimConnectManagedPath was not supplied. Use Scripts\Run-QA-SimConnect-Oracle.ps1 or pass /p:SimConnectManagedPath=..." />
+    <Error Condition="!Exists('$(SimConnectManagedPath)')"
+           Text="Microsoft.FlightSimulator.SimConnect.dll was not found at $(SimConnectManagedPath)" />
+  </Target>
+</Project>
