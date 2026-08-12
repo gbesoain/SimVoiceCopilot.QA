@@ -36,7 +36,7 @@ Read-Host "Press ENTER when ready"
 $started = Get-Date
 $results = New-Object System.Collections.Generic.List[object]
 
-$version = Read-PassFail "Does the EFB show EFB v0.1.17 at the absolute bottom-left edge?"
+$version = Read-PassFail "Does the EFB show EFB v0.1.18 at the absolute bottom-left edge?"
 $results.Add([pscustomobject]@{ id='EFB_VERSION_0117_BOTTOM_EDGE'; success=$version })
 
 $buttonVisible = Read-PassFail "For an item with a native visual helper, are both Auto and Focus/Enfocar visible in the current-item card?"
@@ -67,7 +67,7 @@ $persist = Read-PassFail "If you changed Auto, close/reopen SVC/EFB or restart t
 $results.Add([pscustomobject]@{ id='AUTO_FOCUS_PERSISTENCE'; success=$persist })
 
 $report = [ordered]@{
-    suite = 'GuidedChecklistFocus-1.0.19.0-R7-raceguard'
+    suite = 'GuidedChecklistFocus-1.0.19.0-R8-raceguard'
     startedAt = $started.ToString('o')
     finishedAt = (Get-Date).ToString('o')
     results = @($results)
@@ -79,12 +79,20 @@ $report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $reportPath -Encodi
 
 Write-Host ""
 if ($report.success) {
-    Write-Host "Guided Checklist Focus R7 QA: PASS" -ForegroundColor Green
+    Write-Host "Guided Checklist Focus R8 QA: PASS" -ForegroundColor Green
     Write-Host "Report: $reportPath" -ForegroundColor DarkGray
     exit 0
 }
 
-Write-Host "Guided Checklist Focus R7 QA: FAIL" -ForegroundColor Red
+Write-Host "Guided Checklist Focus R8 QA: FAIL" -ForegroundColor Red
 Write-Host "Report: $reportPath" -ForegroundColor DarkGray
 Write-Host "If a focus/reset step fails, also send the SimVoice support package. Look for GUIDED_CHECKLIST_* and EFB_NATIVE_* markers." -ForegroundColor Yellow
 exit 1
+
+# R8 lifecycle-specific manual checks
+Write-Host ""
+Write-Host "R8 lifecycle checks:" -ForegroundColor Cyan
+Write-Host " - Complete a focused item whose next item has NO focus: view must reset immediately."
+Write-Host " - Disable Auto, press Enfocar, then confirm the item: view must reset to pilot default."
+Write-Host " - Complete a checklist: view must reset BEFORE pressing Siguiente checklist."
+Write-Host " - After completion, press the Checklist tab again in Windows/EFB: Windows selection must open silently."
