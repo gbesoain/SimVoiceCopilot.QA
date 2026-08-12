@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$OutputDirectory = ""
 )
@@ -23,13 +23,13 @@ function Read-PassFail {
 }
 
 Write-Host ""
-Write-Host "SimVoice Copilot 1.0.19.0 - Guided Voice Checklist Focus R9 QA" -ForegroundColor Cyan
+Write-Host "SimVoice Copilot 1.0.19.0 - Guided Voice Checklist Focus R10 QA" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Preconditions" -ForegroundColor Yellow
 Write-Host "1. MSFS 2024 is running with the same C172 G1000 (or another aircraft with working native checklist eye helpers)."
 Write-Host "2. SimVoice Copilot 1.0.19.0 QA is connected to FS2024."
-Write-Host "3. Configuration -> MSFS 2024 components shows Included 0.1.19 | Installed 0.1.19."
-Write-Host "4. The in-sim EFB shows EFB v0.1.19 at the bottom-left edge."
+Write-Host "3. Configuration -> MSFS 2024 components shows Included 0.1.20 | Installed 0.1.20."
+Write-Host "4. The in-sim EFB shows EFB v0.1.20 at the bottom-left edge."
 Write-Host ""
 Read-Host "Press ENTER when ready"
 
@@ -41,7 +41,7 @@ function Add-Result([string]$Id,[string]$Question) {
     $results.Add([pscustomobject]@{ id=$Id; success=$ok })
 }
 
-Add-Result 'EFB_VERSION_0119_BOTTOM_EDGE' 'Does the EFB show EFB v0.1.19 at the absolute bottom-left edge?'
+Add-Result 'EFB_VERSION_0120_BOTTOM_EDGE' 'Does the EFB show EFB v0.1.20 at the absolute bottom-left edge?'
 Add-Result 'EFB_FOCUS_CONTROLS_VISIBLE' 'For an item with a native visual helper, are both Auto and Focus/Enfocar visible?'
 Add-Result 'AUTO_FOCUS_ENABLED' 'With Auto enabled, did entering a visual-helper item automatically focus/highlight the correct control?'
 Add-Result 'FOCUS_TO_NO_HELPER_RESETS' 'Advance from a focused item to an item WITHOUT a visual helper. Did the highlight clear AND the camera return immediately to the default Pilot cockpit view?'
@@ -51,15 +51,16 @@ Add-Result 'MANUAL_FOCUS_END_RESETS' 'After that manual focus, confirm/complete 
 Add-Result 'AUTO_FOCUS_REENABLED' 'Turn Auto ON again. Did automatic focus resume on the next visual-helper item?'
 Add-Result 'CAMERA_RESET_ON_COMPLETE' 'Complete a checklist while focused. Did highlight clear AND camera return to default Pilot view BEFORE pressing Siguiente checklist?'
 Add-Result 'NEXT_LIST_NO_DELAYED_RESET' 'After completion, press Siguiente checklist. Did it avoid any delayed camera reset belonging to the previous list?'
-Add-Result 'WINDOWS_CHECKLIST_TAB_SELECTION' 'In Windows SVC, after a checklist is Completed, press Checklist again. Did it silently show the checklist-selection screen?'
-Add-Result 'EFB_CHECKLIST_TAB_SELECTION' 'In the in-sim EFB, after Completed and while already on Checklist, press Checklist again. Did it silently show a REAL list selector?'
+Add-Result 'WINDOWS_CHECKLIST_TAB_SELECTION_ANY_STATE' 'In Windows SVC, while a checklist is RUNNING, press the already-active Checklist tab again. Did it immediately reset/abandon the list and silently show checklist selection?'
+Add-Result 'EFB_CHECKLIST_TAB_SELECTION_ANY_STATE' 'In the in-sim EFB, while a checklist is RUNNING and Checklist is already active, press Checklist again. Did it immediately reset/abandon the list and silently show the REAL list selector?'
+Add-Result 'EFB_SELECTION_SCROLLS' 'With more lists than fit on screen, can you scroll the EFB list selector by touch/drag (and wheel if available)?'
 Add-Result 'EFB_SELECTION_STARTS_CHOSEN_LIST' 'From that EFB selector, choose a list. Did SVC start exactly the selected list?'
 Add-Result 'NO_UNSOLICITED_CONFIRM_WHILE_SILENT' 'On a normal item, remain completely silent for at least 5 seconds after the prompt. Did SVC stay on the same item?'
 Add-Result 'AUTO_FOCUS_PERSISTENCE' 'If Auto was changed, did its setting remain preserved after reopening SVC/EFB?'
 
 $failed = @($results | Where-Object { -not $_.success })
 $report = [ordered]@{
-    suite = 'GuidedChecklistFocus-1.0.19.0-R9-lifecycle-selector'
+    suite = 'GuidedChecklistFocus-1.0.19.0-R10-lifecycle-selector'
     startedAt = $started.ToString('o')
     finishedAt = (Get-Date).ToString('o')
     results = @($results)
@@ -71,12 +72,12 @@ $report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $reportPath -Encodi
 
 Write-Host ""
 if ($report.success) {
-    Write-Host "Guided Checklist Focus R9 QA: PASS" -ForegroundColor Green
+    Write-Host "Guided Checklist Focus R10 QA: PASS" -ForegroundColor Green
     Write-Host "Report: $reportPath" -ForegroundColor DarkGray
     exit 0
 }
 
-Write-Host "Guided Checklist Focus R9 QA: FAIL" -ForegroundColor Red
+Write-Host "Guided Checklist Focus R10 QA: FAIL" -ForegroundColor Red
 Write-Host "Report: $reportPath" -ForegroundColor DarkGray
 Write-Host "Generate a SimVoice Support Package immediately after any failed camera/selection transition." -ForegroundColor Yellow
 exit 1
