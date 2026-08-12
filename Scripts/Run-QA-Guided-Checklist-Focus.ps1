@@ -23,13 +23,13 @@ function Read-PassFail {
 }
 
 Write-Host ""
-Write-Host "SimVoice Copilot 1.0.19.0 - Guided Voice Checklist Focus R10 QA" -ForegroundColor Cyan
+Write-Host "SimVoice Copilot 1.0.19.0 - Guided Voice Checklist Focus R11 QA" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Preconditions" -ForegroundColor Yellow
 Write-Host "1. MSFS 2024 is running with the same C172 G1000 (or another aircraft with working native checklist eye helpers)."
 Write-Host "2. SimVoice Copilot 1.0.19.0 QA is connected to FS2024."
-Write-Host "3. Configuration -> MSFS 2024 components shows Included 0.1.20 | Installed 0.1.20."
-Write-Host "4. The in-sim EFB shows EFB v0.1.20 at the bottom-left edge."
+Write-Host "3. Configuration -> MSFS 2024 components shows Included 0.1.21 | Installed 0.1.21."
+Write-Host "4. The in-sim EFB shows EFB v0.1.21 at the bottom-left edge."
 Write-Host ""
 Read-Host "Press ENTER when ready"
 
@@ -41,7 +41,7 @@ function Add-Result([string]$Id,[string]$Question) {
     $results.Add([pscustomobject]@{ id=$Id; success=$ok })
 }
 
-Add-Result 'EFB_VERSION_0120_BOTTOM_EDGE' 'Does the EFB show EFB v0.1.20 at the absolute bottom-left edge?'
+Add-Result 'EFB_VERSION_0121_BOTTOM_EDGE' 'Does the EFB show EFB v0.1.21 at the absolute bottom-left edge?'
 Add-Result 'EFB_FOCUS_CONTROLS_VISIBLE' 'For an item with a native visual helper, are both Auto and Focus/Enfocar visible?'
 Add-Result 'AUTO_FOCUS_ENABLED' 'With Auto enabled, did entering a visual-helper item automatically focus/highlight the correct control?'
 Add-Result 'FOCUS_TO_NO_HELPER_RESETS' 'Advance from a focused item to an item WITHOUT a visual helper. Did the highlight clear AND the camera return immediately to the default Pilot cockpit view?'
@@ -60,7 +60,7 @@ Add-Result 'AUTO_FOCUS_PERSISTENCE' 'If Auto was changed, did its setting remain
 
 $failed = @($results | Where-Object { -not $_.success })
 $report = [ordered]@{
-    suite = 'GuidedChecklistFocus-1.0.19.0-R10-lifecycle-selector'
+    suite = 'GuidedChecklistFocus-1.0.19.0-R11-focus-selector-hardening'
     startedAt = $started.ToString('o')
     finishedAt = (Get-Date).ToString('o')
     results = @($results)
@@ -72,12 +72,12 @@ $report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $reportPath -Encodi
 
 Write-Host ""
 if ($report.success) {
-    Write-Host "Guided Checklist Focus R10 QA: PASS" -ForegroundColor Green
+    Write-Host "Guided Checklist Focus R11 QA: PASS" -ForegroundColor Green
     Write-Host "Report: $reportPath" -ForegroundColor DarkGray
     exit 0
 }
 
-Write-Host "Guided Checklist Focus R10 QA: FAIL" -ForegroundColor Red
+Write-Host "Guided Checklist Focus R11 QA: FAIL" -ForegroundColor Red
 Write-Host "Report: $reportPath" -ForegroundColor DarkGray
 Write-Host "Generate a SimVoice Support Package immediately after any failed camera/selection transition." -ForegroundColor Yellow
 exit 1
