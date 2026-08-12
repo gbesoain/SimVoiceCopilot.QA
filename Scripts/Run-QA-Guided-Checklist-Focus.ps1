@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$OutputDirectory = ""
 )
@@ -36,26 +36,38 @@ Read-Host "Press ENTER when ready"
 $started = Get-Date
 $results = New-Object System.Collections.Generic.List[object]
 
-$auto = Read-PassFail "Start a native checklist. When the first actionable item is spoken, did MSFS automatically highlight/focus its cockpit control?"
-$results.Add([pscustomobject]@{ id='AUTO_FOCUS_FIRST_ITEM'; success=$auto })
+$version = Read-PassFail "Does the EFB show EFB v0.1.17 at the absolute bottom-left edge?"
+$results.Add([pscustomobject]@{ id='EFB_VERSION_0117_BOTTOM_EDGE'; success=$version })
 
-$buttonVisible = Read-PassFail "For an item with a native visual helper, is the Focus/Enfocar button visible in the current-item card?"
-$results.Add([pscustomobject]@{ id='EFB_FOCUS_BUTTON_VISIBLE'; success=$buttonVisible })
+$buttonVisible = Read-PassFail "For an item with a native visual helper, are both Auto and Focus/Enfocar visible in the current-item card?"
+$results.Add([pscustomobject]@{ id='EFB_FOCUS_CONTROLS_VISIBLE'; success=$buttonVisible })
 
-$manual = Read-PassFail "Move the camera away, press Focus/Enfocar. Did MSFS highlight/focus the correct cockpit control again?"
-$results.Add([pscustomobject]@{ id='EFB_MANUAL_FOCUS'; success=$manual })
+$autoOn = Read-PassFail "With Auto enabled, advance to a visual-helper item. Did MSFS automatically highlight/focus the correct cockpit control?"
+$results.Add([pscustomobject]@{ id='AUTO_FOCUS_ENABLED'; success=$autoOn })
 
-$advance = Read-PassFail "Confirm/Checked the item. If the next item has a visual helper, did focus move to the next control without leaving the old one highlighted?"
-$results.Add([pscustomobject]@{ id='AUTO_FOCUS_ADVANCE'; success=$advance })
+$autoOff = Read-PassFail "Turn Auto OFF, then advance to another visual-helper item. Did the checklist advance WITHOUT automatically moving/focusing the camera?"
+$results.Add([pscustomobject]@{ id='AUTO_FOCUS_DISABLED'; success=$autoOff })
 
-$noHelper = Read-PassFail "On an item with no visual helper (if available), did the checklist continue normally without a broken Focus button or error?"
+$manual = Read-PassFail "While Auto is OFF, press Focus/Enfocar. Did MSFS still highlight/focus the correct cockpit control?"
+$results.Add([pscustomobject]@{ id='MANUAL_FOCUS_WITH_AUTO_OFF'; success=$manual })
+
+$autoRestore = Read-PassFail "Turn Auto ON again and advance to another visual-helper item. Did automatic focus resume?"
+$results.Add([pscustomobject]@{ id='AUTO_FOCUS_REENABLED'; success=$autoRestore })
+
+$noHelper = Read-PassFail "On an item with no visual helper (if available), did the checklist continue normally without a broken Focus control or error?"
 $results.Add([pscustomobject]@{ id='NO_HELPER_FALLBACK'; success=$noHelper })
 
-$cancel = Read-PassFail "Cancel or complete the checklist. Was the active cockpit highlight cleared?"
-$results.Add([pscustomobject]@{ id='FOCUS_CLEAR_END'; success=$cancel })
+$silent = Read-PassFail "On one normal voice-confirmation item, remain completely silent through the prompt and for at least 5 seconds afterward. Did SVC remain on that SAME item without confirming it by itself?"
+$results.Add([pscustomobject]@{ id='NO_UNSOLICITED_CONFIRM_WHILE_SILENT'; success=$silent })
+
+$cameraReset = Read-PassFail "Complete the checklist while the camera is focused away from the pilot view. Did the blue highlight clear AND did the camera return to the default pilot cockpit view?"
+$results.Add([pscustomobject]@{ id='CAMERA_RESET_ON_COMPLETE'; success=$cameraReset })
+
+$persist = Read-PassFail "If you changed Auto, close/reopen SVC/EFB or restart the QA app. Was the Auto preference preserved?"
+$results.Add([pscustomobject]@{ id='AUTO_FOCUS_PERSISTENCE'; success=$persist })
 
 $report = [ordered]@{
-    suite = 'GuidedChecklistFocus-1.0.19.0-A1'
+    suite = 'GuidedChecklistFocus-1.0.19.0-R7-raceguard'
     startedAt = $started.ToString('o')
     finishedAt = (Get-Date).ToString('o')
     results = @($results)
@@ -67,12 +79,12 @@ $report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $reportPath -Encodi
 
 Write-Host ""
 if ($report.success) {
-    Write-Host "Guided Checklist Focus QA: PASS" -ForegroundColor Green
+    Write-Host "Guided Checklist Focus R7 QA: PASS" -ForegroundColor Green
     Write-Host "Report: $reportPath" -ForegroundColor DarkGray
     exit 0
 }
 
-Write-Host "Guided Checklist Focus QA: FAIL" -ForegroundColor Red
+Write-Host "Guided Checklist Focus R7 QA: FAIL" -ForegroundColor Red
 Write-Host "Report: $reportPath" -ForegroundColor DarkGray
-Write-Host "If Focus is unavailable, also send the SimVoice support package. Look for GUIDED_CHECKLIST_* and EFB_NATIVE_VISUAL_HELPER_* markers." -ForegroundColor Yellow
+Write-Host "If a focus/reset step fails, also send the SimVoice support package. Look for GUIDED_CHECKLIST_* and EFB_NATIVE_* markers." -ForegroundColor Yellow
 exit 1
