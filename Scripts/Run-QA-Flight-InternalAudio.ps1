@@ -1,6 +1,6 @@
 ﻿[CmdletBinding()]
 param(
-    [ValidateSet("SmokeInternalEN", "CoreInternalEN", "ExtendedRadioInternalEN", "RecognitionStressInternalEN", "SmokeInternalES", "CoreInternalES")]
+    [ValidateSet("SmokeInternalEN", "CoreInternalEN", "NoConnectorInternalEN", "ExtendedRadioInternalEN", "RecognitionStressInternalEN", "SmokeInternalES", "CoreInternalES")]
     [string]$Suite = "SmokeInternalEN",
 
     [ValidateSet("Heading", "Altitude", "VerticalSpeed", "Radio", "Transponder")]
@@ -203,6 +203,46 @@ function Wait-InternalAudioBridge {
     } while ((Get-Date) -lt $deadline)
 
     throw ("Internal Audio QA bridge was not ready within {0} seconds. Last error: {1}. Confirm that the installed app title includes '[QA Internal Audio]'." -f $TimeoutSeconds, $lastError)
+}
+
+function Restart-SimVoiceForQaMatrix {
+    param(
+        [string]$AppId,
+        [string]$ExpectedLanguage,
+        [int]$TimeoutSeconds,
+        [string]$Reason
+    )
+
+    Write-RunLog ("QA recovery: restarting SimVoice after {0}." -f $Reason) "WARN"
+
+    $existing = @(Get-Process -Name $ProcessName -ErrorAction SilentlyContinue)
+    foreach ($process in $existing) {
+        try {
+            $process.Refresh()
+            if (-not $process.HasExited) {
+                try { $process.CloseMainWindow() | Out-Null } catch { }
+                if (-not $process.WaitForExit(4000)) {
+                    Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+        catch { }
+        try { $process.Dispose() } catch { }
+    }
+
+    Start-Process "explorer.exe" ("shell:AppsFolder\{0}" -f $AppId)
+    $restarted = Wait-SimVoiceProcess -TimeoutSeconds $TimeoutSeconds
+    Write-RunLog ("QA recovery: SimVoice process ready PID={0}." -f $restarted.Id)
+
+    $bridge = Wait-InternalAudioBridge -ExpectedLanguage $ExpectedLanguage -TimeoutSeconds $TimeoutSeconds
+    Write-RunLog ("QA recovery: Internal Audio bridge ready after restart; language={0}." -f $bridge.VoiceLanguage)
+
+    if ($InitialRecognizerSettleMs -gt 0) {
+        Write-RunLog ("QA recovery: recognizer settle {0} ms after restart." -f $InitialRecognizerSettleMs)
+        Start-Sleep -Milliseconds $InitialRecognizerSettleMs
+    }
+
+    return $restarted
 }
 
 function Get-WindowsPowerShell {
@@ -921,7 +961,7 @@ namespace SimVoiceQa
 "@ -Language CSharp
 }
 
-Write-RunLog "SimVoice Copilot QA Phase 2.3.3 — HF36-R14 Human-Paced Internal Audio Flight Functional QA"
+Write-RunLog "SimVoice Copilot QA Phase 2.3.4 — HF36-R17 QA4 Resilient Internal Audio Matrix Runner"
 Write-RunLog ("Suite: {0}" -f $Suite)
 Write-RunLog ("Output: {0}" -f $OutputDirectory)
 
@@ -941,6 +981,9 @@ if ($Suite -eq "CoreInternalEN" -and $suiteCatalogCount -ne 36) {
 }
 if ($Suite -eq "CoreInternalES" -and $suiteCatalogCount -ne 30) {
     throw "HF36-R14 CoreInternalES gate must contain exactly 30 cases; catalog contains $suiteCatalogCount."
+}
+if ($Suite -eq "NoConnectorInternalEN" -and $suiteCatalogCount -ne 30) {
+    throw "HF36-R17 NoConnectorInternalEN gate must contain exactly 30 cases; catalog contains $suiteCatalogCount."
 }
 
 if ($Category.Count -gt 0) {
@@ -1007,9 +1050,25 @@ foreach ($test in $tests) {
     if ($aborted) { break }
     try { $simVoiceProcess.Refresh() } catch { }
     if ($simVoiceProcess.HasExited) {
-        $aborted = $true
-        Write-RunLog "SimVoice Copilot exited before the next command. The suite is aborting immediately; manual reopening cannot convert this run into PASS." "ERROR"
-        break
+        if ($ContinueAfterFailure) {
+            try {
+                $simVoiceProcess = Restart-SimVoiceForQaMatrix `
+                    -AppId ([string]$app.AppID) `
+                    -ExpectedLanguage ([string]$tests[0].language) `
+                    -TimeoutSeconds $ConnectionTimeoutSeconds `
+                    -Reason "process exit before next command"
+            }
+            catch {
+                $aborted = $true
+                Write-RunLog ("QA recovery failed before next command: {0}" -f $_.Exception.Message) "ERROR"
+                break
+            }
+        }
+        else {
+            $aborted = $true
+            Write-RunLog "SimVoice Copilot exited before the next command. The suite is aborting because -ContinueAfterFailure was not requested." "ERROR"
+            break
+        }
     }
     $testNumber++
     $testId = [string]$test.id
@@ -1120,6 +1179,7 @@ foreach ($test in $tests) {
     $synthesizerVoice = ""
     $injectionElapsedMs = 0
     $speechRate = 0
+    $recoveryNeeded = $false
 
     while (-not $passed -and $attempt -lt $MaxAttempts) {
         $attempt++
@@ -1216,11 +1276,14 @@ foreach ($test in $tests) {
             try { $wait.Process.Dispose() } catch { }
             try { $simVoiceProcess.Refresh() } catch { }
             if ($simVoiceProcess.HasExited) {
-                $message = "SimVoice Copilot crashed or exited during internal audio injection: $injectionError"
-                $aborted = $true
+                $message = "SimVoice Copilot process exited during internal audio injection: $injectionError"
+                $recoveryNeeded = $true
+                if (-not $ContinueAfterFailure) {
+                    $aborted = $true
+                }
             }
             else {
-                $message = "Internal audio injection failed: $injectionError"
+                $message = "Internal audio injection failed while SimVoice remained running: $injectionError"
             }
             $passed = $false
         }
@@ -1243,9 +1306,12 @@ foreach ($test in $tests) {
             }
             elseif ($simVoiceProcess.HasExited) {
                 try { $wait.Process.Dispose() } catch { }
-                $message = "SimVoice Copilot exited during the command test. The suite is aborting immediately."
+                $message = "SimVoice Copilot process exited during the command test."
                 $passed = $false
-                $aborted = $true
+                $recoveryNeeded = $true
+                if (-not $ContinueAfterFailure) {
+                    $aborted = $true
+                }
             }
             else {
                 $wait.Process.WaitForExit()
@@ -1273,6 +1339,23 @@ foreach ($test in $tests) {
             Write-RunLog ("{0}: FAIL phrase='{1}' before={2} expected={3} observed={4} attempt={5} speechRate={6}: {7}" -f $testId, $phrase, $beforeObserved, $expected, $observed, $attempt, $speechRate, $message) "ERROR"
 
             if (-not $aborted -and $attempt -lt $MaxAttempts) {
+                if ($recoveryNeeded) {
+                    try {
+                        $simVoiceProcess = Restart-SimVoiceForQaMatrix `
+                            -AppId ([string]$app.AppID) `
+                            -ExpectedLanguage ([string]$test.language) `
+                            -TimeoutSeconds $ConnectionTimeoutSeconds `
+                            -Reason ("failed attempt " + $attempt + " of " + $testId)
+                        $recoveryNeeded = $false
+                    }
+                    catch {
+                        $aborted = $true
+                        $message = $message + " | QA recovery failed: " + $_.Exception.Message
+                        Write-RunLog ("{0}: QA recovery failed before retry: {1}" -f $testId, $_.Exception.Message) "ERROR"
+                        break
+                    }
+                }
+
                 Write-Host "Retrying automatically with a fresh Oracle snapshot..." -ForegroundColor Yellow
                 Start-Sleep -Seconds 2
             }
@@ -1306,8 +1389,23 @@ foreach ($test in $tests) {
         Wait-QaHumanPace -Reason ("after " + $testId)
     }
 
+    if (-not $passed -and $recoveryNeeded -and $ContinueAfterFailure -and -not $aborted) {
+        try {
+            $simVoiceProcess = Restart-SimVoiceForQaMatrix `
+                -AppId ([string]$app.AppID) `
+                -ExpectedLanguage ([string]$test.language) `
+                -TimeoutSeconds $ConnectionTimeoutSeconds `
+                -Reason ("failed final attempt of " + $testId + "; continuing matrix")
+            $recoveryNeeded = $false
+        }
+        catch {
+            $aborted = $true
+            Write-RunLog ("{0}: QA recovery failed before next case: {1}" -f $testId, $_.Exception.Message) "ERROR"
+        }
+    }
+
     if ($aborted) {
-        Write-Host "ABORTED: SimVoice Copilot exited. Remaining command cases were not executed." -ForegroundColor Red
+        Write-Host "ABORTED: SimVoice Copilot could not be kept/recovered for the remaining command cases." -ForegroundColor Red
         break
     }
 
