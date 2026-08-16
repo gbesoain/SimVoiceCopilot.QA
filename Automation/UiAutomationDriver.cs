@@ -535,30 +535,76 @@ namespace SimVoiceCopilot.QA.Automation
             return !NativeMethods.IsWindow(windowHandle) || !NativeMethods.IsWindowVisible(windowHandle);
         }
 
+        // SIMVOICE_QA_HF36_R14_MSIX_UIREADY_V3
         private void WaitForMainWindowEnabled(TimeSpan timeout)
         {
-            int rawMainHandle = SafeInt(delegate { return mainWindow.Current.NativeWindowHandle; });
-            IntPtr mainHandle = new IntPtr(rawMainHandle);
-            if (mainHandle == IntPtr.Zero)
-            {
-                return;
-            }
-
             DateTime deadline = DateTime.Now.Add(timeout);
+
             while (DateTime.Now < deadline)
             {
-                if (NativeMethods.IsWindow(mainHandle) && NativeMethods.IsWindowEnabled(mainHandle))
+                process.Refresh();
+                if (process.HasExited)
                 {
-                    NativeMethods.ShowWindowAsync(mainHandle, NativeMethods.SwRestore);
-                    NativeMethods.SetForegroundWindow(mainHandle);
+                    throw new InvalidOperationException(
+                        "The application exited while waiting for the main window to be re-enabled.");
+                }
+
+                IntPtr candidate = process.MainWindowHandle;
+                if (candidate != IntPtr.Zero &&
+                    NativeMethods.IsWindow(candidate) &&
+                    NativeMethods.IsWindowVisible(candidate) &&
+                    NativeMethods.IsWindowEnabled(candidate))
+                {
+                    try
+                    {
+                        AutomationElement refreshed = AutomationElement.FromHandle(candidate);
+                        if (refreshed != null)
+                        {
+                            mainWindow = refreshed;
+                        }
+                    }
+                    catch
+                    {
+                    }
+
+                    NativeMethods.ShowWindowAsync(candidate, NativeMethods.SwRestore);
+                    NativeMethods.SetForegroundWindow(candidate);
+                    return;
+                }
+
+                foreach (IntPtr handle in FindVisibleProcessWindowHandles())
+                {
+                    if (!NativeMethods.IsWindow(handle) ||
+                        !NativeMethods.IsWindowVisible(handle) ||
+                        !NativeMethods.IsWindowEnabled(handle))
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        AutomationElement refreshed = AutomationElement.FromHandle(handle);
+                        if (refreshed != null)
+                        {
+                            mainWindow = refreshed;
+                        }
+                    }
+                    catch
+                    {
+                    }
+
+                    NativeMethods.ShowWindowAsync(handle, NativeMethods.SwRestore);
+                    NativeMethods.SetForegroundWindow(handle);
                     return;
                 }
 
                 Thread.Sleep(100);
             }
 
-            throw new TimeoutException("The main window did not become enabled after closing the modal window.");
+            throw new TimeoutException(
+                "No visible enabled main window belonging to the application became available after closing the modal window.");
         }
+
 
         private bool TryNativeClick(AutomationElement element)
         {

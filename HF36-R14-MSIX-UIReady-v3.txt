@@ -1,0 +1,7 @@
+﻿SimVoiceCopilot.QA patch: HF36-R14-MSIX-UIReady-v3
+Installed: 2026-08-15T21:38:46.1511434-04:00
+ElementTimeoutSeconds: 30
+Main-window verification: refreshed current HWND + enabled visible fallback
+Backup root: C:\Users\Gonzalo\AppData\Local\SimVoiceCopilot\QAPatchBackups\HF36-R14-MSIX-UIReady-v3-20260815-213843
+Product/EFB/WASM unchanged
+Product MSIX rebuild required: NO

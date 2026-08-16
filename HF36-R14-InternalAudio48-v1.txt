@@ -1,0 +1,7 @@
+﻿Patch: HF36-R14-InternalAudio48-v1
+Installed: 2026-08-16T15:53:47.0733964-04:00
+Required gate: CoreInternalEN 48 cases
+Optional gate: CoreInternalES 30 cases
+Product source changed: NO
+Product MSIX rebuild required: NO
+Backup: C:\Users\Gonzalo\AppData\Local\SimVoiceCopilot\QAPatchBackups\HF36-R14-InternalAudio48-v1-20260816-155344

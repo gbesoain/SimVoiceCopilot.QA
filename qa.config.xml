@@ -17,7 +17,7 @@
 
   <Execution>
     <Cycles>25</Cycles>
-    <ElementTimeoutSeconds>10</ElementTimeoutSeconds>
+    <ElementTimeoutSeconds>30</ElementTimeoutSeconds>
     <DelayAfterActionMs>700</DelayAfterActionMs>
     <ResponsivenessRetries>3</ResponsivenessRetries>
     <ResponsivenessRetryDelayMs>1000</ResponsivenessRetryDelayMs>
