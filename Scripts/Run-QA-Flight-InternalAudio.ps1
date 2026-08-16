@@ -1,7 +1,10 @@
 ﻿[CmdletBinding()]
 param(
-    [ValidateSet("SmokeInternalEN", "CoreInternalEN", "SmokeInternalES", "CoreInternalES")]
+    [ValidateSet("SmokeInternalEN", "CoreInternalEN", "ExtendedRadioInternalEN", "RecognitionStressInternalEN", "SmokeInternalES", "CoreInternalES")]
     [string]$Suite = "SmokeInternalEN",
+
+    [ValidateSet("Heading", "Altitude", "VerticalSpeed", "Radio", "Transponder")]
+    [string[]]$Category = @(),
 
     [string]$AppNamePattern = "*SimVoice*",
     [string]$AppIdPattern = "*",
@@ -18,6 +21,20 @@ param(
     [switch]$SkipAppLaunch,
     [switch]$CloseAppAtEnd,
     [switch]$NoBuild,
+
+    # Keep QA much faster than a human session, but never stack spoken feedback
+    # from several commands on top of each other.
+    [ValidateRange(0, 5000)]
+    [int]$InterCommandPauseMs = 650,
+
+    [ValidateRange(5, 120)]
+    [int]$SpeechIdleTimeoutSeconds = 20,
+
+    # HF36-R15: one-time QA-only settle after the internal bridge is ready. This
+    # prevents the first synthesized command from landing on the product's normal
+    # recognizer warm-up boundary; the product acceptance gate itself is unchanged.
+    [ValidateRange(0, 5000)]
+    [int]$InitialRecognizerSettleMs = 1250,
 
     # Final pre-certification runs stop after the first command that still fails
     # after all configured attempts. Use this switch only when collecting a full
@@ -68,7 +85,7 @@ function Write-RunLog {
 
 function Invoke-InternalAudioRequest {
     param(
-        [ValidateSet("ping", "synthesize")]
+        [ValidateSet("ping", "synthesize", "wait-speech-idle")]
         [string]$Action,
         [string]$Text = "",
         [string]$Language = "",
@@ -124,6 +141,36 @@ function Invoke-InternalAudioRequest {
         if ($writer) { try { $writer.Dispose() } catch { } }
         if ($reader) { try { $reader.Dispose() } catch { } }
         if ($pipe) { try { $pipe.Dispose() } catch { } }
+    }
+}
+
+function Wait-QaHumanPace {
+    param(
+        [string]$Reason = "between commands"
+    )
+
+    try {
+        $idle = Invoke-InternalAudioRequest `
+            -Action "wait-speech-idle" `
+            -TimeoutMs ($SpeechIdleTimeoutSeconds * 1000) `
+            -CorrelationId ("pace-" + [guid]::NewGuid().ToString("N"))
+
+        if ($null -eq $idle -or -not [bool]$idle.Success) {
+            $detail = if ($null -ne $idle) { [string]$idle.Error } else { "No bridge response" }
+            Write-RunLog ("QA pacing: speech-idle wait did not complete ({0}): {1}" -f $Reason, $detail) "WARN"
+        }
+        else {
+            $pending = ""
+            try { $pending = [string]$idle.Diagnostics.pendingSpeechCount } catch { }
+            Write-RunLog ("QA pacing: spoken feedback idle ({0}), pending={1}" -f $Reason, $pending)
+        }
+    }
+    catch {
+        Write-RunLog ("QA pacing: speech-idle wait failed ({0}): {1}" -f $Reason, $_.Exception.Message) "WARN"
+    }
+
+    if ($InterCommandPauseMs -gt 0) {
+        Start-Sleep -Milliseconds $InterCommandPauseMs
     }
 }
 
@@ -303,6 +350,14 @@ function Get-SnapshotObservedValue {
         "HeadingBug" = "HeadingBugDegrees"
         "SelectedAltitude" = "SelectedAltitudeFeet"
         "SelectedVerticalSpeed" = "SelectedVerticalSpeedFpm"
+        "Com1Active" = "Com1ActiveFrequencyMHz"
+        "Com1Standby" = "Com1StandbyFrequencyMHz"
+        "Com2Active" = "Com2ActiveFrequencyMHz"
+        "Com2Standby" = "Com2StandbyFrequencyMHz"
+        "Nav1Active" = "Nav1ActiveFrequencyMHz"
+        "Nav1Standby" = "Nav1StandbyFrequencyMHz"
+        "Nav2Active" = "Nav2ActiveFrequencyMHz"
+        "Nav2Standby" = "Nav2StandbyFrequencyMHz"
         "Transponder" = "TransponderCode"
         "AutopilotMaster" = "AutopilotMaster"
         "HeadingHold" = "HeadingHold"
@@ -359,6 +414,146 @@ function Select-TestVariant {
     }
 
     return $null
+}
+
+function Get-RequiredTarget {
+    param([object]$Test)
+
+    $property = $Test.PSObject.Properties["requiredTarget"]
+    if ($null -eq $property -or $null -eq $property.Value) {
+        return $null
+    }
+
+    return $property.Value
+}
+
+function Get-TestPrecondition {
+    param([object]$Test)
+
+    $property = $Test.PSObject.Properties["precondition"]
+    if ($null -eq $property -or $null -eq $property.Value) {
+        return $null
+    }
+
+    return $property.Value
+}
+
+function Test-ObservedMatchesExpected {
+    param(
+        [string]$Variable,
+        [object]$Observed,
+        [string]$Expected,
+        [double]$Tolerance
+    )
+
+    $expectedNumber = [double]::Parse($Expected, [Globalization.CultureInfo]::InvariantCulture)
+    $observedNumber = [Convert]::ToDouble($Observed, [Globalization.CultureInfo]::InvariantCulture)
+    return (Get-NumericDifference -Variable $Variable -Observed $observedNumber -Expected $expectedNumber) -le $Tolerance
+}
+
+function Invoke-InternalAudioPrecondition {
+    param(
+        [object]$Test,
+        [object]$Variant,
+        [string]$TestRoot,
+        [int]$AttemptNumber = 1
+    )
+
+    $phrase = [string]$Variant.phrase
+    $expected = [string]$Variant.expected
+    $variable = [string]$Test.variable
+    $tolerance = [double]$Test.tolerance
+    $timeoutSeconds = [int]$Test.timeoutSeconds
+    $speechRate = Get-TestSpeechRate -Test $Test -Attempt $AttemptNumber
+    $directory = Join-Path $TestRoot ("precondition-{0}" -f $AttemptNumber)
+
+    Write-Host ("Precondition: internally synthesize '{0}' -> {1}" -f $phrase, $expected) -ForegroundColor DarkYellow
+
+    $wait = Start-OracleWait -Directory $directory -Variable $variable -Expected $expected -Tolerance $tolerance -TimeoutSeconds $timeoutSeconds
+    Start-Sleep -Milliseconds 500
+
+    try {
+        $injection = Invoke-InternalAudioRequest `
+            -Action synthesize `
+            -Text $phrase `
+            -Language ([string]$Test.language) `
+            -SpeechRate $speechRate `
+            -TimeoutMs (($timeoutSeconds * 1000) + 10000) `
+            -CorrelationId ("{0}-precondition-{1}" -f ([string]$Test.id), $AttemptNumber)
+
+        $preconditionEvidence = [ordered]@{
+            TestId = [string]$Test.id
+            Attempt = $AttemptNumber
+            Phrase = $phrase
+            SpeechRate = $speechRate
+            Success = [bool]$injection.Success
+            RecognizedText = [string]$injection.RecognizedText
+            CommandFeedback = [string]$injection.CommandFeedback
+            Error = [string]$injection.Error
+            SynthesizerVoice = [string]$injection.SynthesizerVoice
+            ElapsedMs = [int64]$injection.ElapsedMs
+            CapturedAtLocal = (Get-Date).ToString("o")
+        }
+        $preconditionEvidence |
+            ConvertTo-Json -Depth 8 |
+            Set-Content -LiteralPath (Join-Path $directory "internal-audio-response.json") -Encoding UTF8
+
+        Write-RunLog ("{0}: precondition speechRate={1} success={2} recognized='{3}' feedback='{4}' error='{5}'" -f `
+            [string]$Test.id, $speechRate, [bool]$injection.Success, [string]$injection.RecognizedText, `
+            [string]$injection.CommandFeedback, [string]$injection.Error)
+
+        if (-not [bool]$injection.Success) {
+            Stop-And-WaitProcess -Process $wait.Process
+            return [pscustomobject]@{
+                Passed = $false
+                Observed = ""
+                Message = "Internal-audio precondition injection failed: " + [string]$injection.Error
+                Directory = $directory
+            }
+        }
+
+        $hardDeadline = (Get-Date).AddSeconds($timeoutSeconds + 20)
+        while (-not $wait.Process.HasExited -and (Get-Date) -lt $hardDeadline) {
+            Start-Sleep -Milliseconds 250
+            $wait.Process.Refresh()
+        }
+
+        if (-not $wait.Process.HasExited) {
+            Stop-And-WaitProcess -Process $wait.Process
+            return [pscustomobject]@{
+                Passed = $false
+                Observed = ""
+                Message = "Precondition Oracle wait exceeded its hard timeout."
+                Directory = $directory
+            }
+        }
+
+        $wait.Process.WaitForExit()
+        $report = Read-OracleReport -Path $wait.ReportPath
+        if ($null -eq $report -or $null -eq $report.Assertion) {
+            return [pscustomobject]@{
+                Passed = $false
+                Observed = ""
+                Message = "Precondition Oracle did not generate a valid assertion report."
+                Directory = $directory
+            }
+        }
+
+        $preconditionPassed = [bool]$report.Success
+        if ($preconditionPassed) {
+            Wait-QaHumanPace -Reason ("after precondition for " + [string]$Test.id)
+        }
+
+        return [pscustomobject]@{
+            Passed = $preconditionPassed
+            Observed = [string]$report.Assertion.Observed
+            Message = [string]$report.Message
+            Directory = $directory
+        }
+    }
+    finally {
+        try { $wait.Process.Dispose() } catch { }
+    }
 }
 
 function Get-TestSpeechRate {
@@ -610,7 +805,7 @@ function Write-FunctionalReports {
     $htmlPath = Join-Path $OutputDirectory "functional-report.html"
 
     $report | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $jsonPath -Encoding UTF8
-    $Results | Select-Object TestId, Suite, Language, Phrase, RecognizedText, CommandFeedback, SynthesizerVoice, SpeechRate, Variable, Before, Expected, Observed, Tolerance, Attempts, InjectionElapsedMs, LatencySeconds, Passed, Message, OracleDirectory |
+    $Results | Select-Object TestId, Category, Suite, Language, Phrase, RecognizedText, CommandFeedback, SynthesizerVoice, SpeechRate, Variable, Before, Expected, Observed, Tolerance, Attempts, InjectionElapsedMs, LatencySeconds, Passed, Message, OracleDirectory |
         Export-Csv -LiteralPath $csvPath -NoTypeInformation -Encoding UTF8
 
     $resultClass = if ($Success) { "pass" } else { "fail" }
@@ -726,7 +921,7 @@ namespace SimVoiceQa
 "@ -Language CSharp
 }
 
-Write-RunLog "SimVoice Copilot QA Phase 2.3.0 — Internal Audio End-to-End Flight Functional QA"
+Write-RunLog "SimVoice Copilot QA Phase 2.3.3 — HF36-R14 Human-Paced Internal Audio Flight Functional QA"
 Write-RunLog ("Suite: {0}" -f $Suite)
 Write-RunLog ("Output: {0}" -f $OutputDirectory)
 
@@ -736,7 +931,25 @@ if ($null -eq $suiteProperty) {
     throw "Suite '$Suite' was not found in $catalogPath."
 }
 $tests = @($suiteProperty.Value)
-if ($tests.Count -eq 0) { throw "Suite '$Suite' contains no tests." }
+$suiteCatalogCount = $tests.Count
+
+# Validate the complete suite before applying an optional category filter.
+# HF36-R14 CoreInternalEN v2 intentionally contains 36 canonical functional
+# cases; alias/radio-extension stress lives in separate optional suites.
+if ($Suite -eq "CoreInternalEN" -and $suiteCatalogCount -ne 36) {
+    throw "HF36-R14 CoreInternalEN gate must contain exactly 36 cases; catalog contains $suiteCatalogCount."
+}
+if ($Suite -eq "CoreInternalES" -and $suiteCatalogCount -ne 30) {
+    throw "HF36-R14 CoreInternalES gate must contain exactly 30 cases; catalog contains $suiteCatalogCount."
+}
+
+if ($Category.Count -gt 0) {
+    $tests = @($tests | Where-Object {
+        $categoryProperty = $_.PSObject.Properties["category"]
+        $null -ne $categoryProperty -and $Category -contains [string]$categoryProperty.Value
+    })
+}
+if ($tests.Count -eq 0) { throw "Suite '$Suite' contains no tests after applying the requested category filter." }
 
 $app = Find-SimVoiceApp
 Write-RunLog ("Installed MSIX: {0} [{1}]" -f $app.Name, $app.AppID)
@@ -771,6 +984,10 @@ else {
 $suiteLanguage = [string]$tests[0].language
 $bridgeStatus = Wait-InternalAudioBridge -ExpectedLanguage $suiteLanguage -TimeoutSeconds $ConnectionTimeoutSeconds
 Write-RunLog ("Internal audio bridge ready: pipe={0}, app={1}, configured language={2}" -f $pipeName, $bridgeStatus.AppVersion, $bridgeStatus.VoiceLanguage)
+if ($InitialRecognizerSettleMs -gt 0) {
+    Write-RunLog ("QA initial recognizer settle: waiting {0} ms once before the first command." -f $InitialRecognizerSettleMs)
+    Start-Sleep -Milliseconds $InitialRecognizerSettleMs
+}
 Write-Host ""
 Write-Host "INTERNAL AUDIO PRECHECK: PASS" -ForegroundColor Green
 Write-Host ("  Voice profile/language : {0}" -f $suiteLanguage)
@@ -778,6 +995,8 @@ Write-Host ("  Internal audio pipe    : {0}" -f $pipeName)
 Write-Host "  Microphone             : not used"
 Write-Host "  Audio source           : Windows speech synthesis -> 16 kHz PCM -> normal Vosk pipeline"
 Write-Host "  Simulator              : active flight; do not operate the tested controls manually"
+Write-Host ("  QA initial settle      : {0} ms once after bridge ready" -f $InitialRecognizerSettleMs)
+Write-Host ("  QA pacing              : wait for spoken feedback idle + {0} ms gap" -f $InterCommandPauseMs)
 Write-Host ""
 
 $results = New-Object 'System.Collections.Generic.List[object]' 
@@ -816,17 +1035,76 @@ foreach ($test in $tests) {
 
     $beforeSnapshot = @($beforeReport.Snapshots)[-1]
     $beforeObserved = Get-SnapshotObservedValue -Snapshot $beforeSnapshot -Variable ([string]$test.variable)
-    $variant = Select-TestVariant -Test $test -Observed $beforeObserved
 
-    if ($null -eq $variant) {
-        $results.Add([pscustomobject][ordered]@{
-            TestId = $testId; Suite = $Suite; Language = [string]$test.language; Phrase = "";
-            Variable = [string]$test.variable; Before = [string]$beforeObserved; Expected = ""; Observed = [string]$beforeObserved;
-            Tolerance = [double]$test.tolerance; Attempts = 0; LatencySeconds = 0; Passed = $false;
-            Message = "All configured target variants already matched the current simulator value; no valid precondition was available."; OracleDirectory = $testRoot
-        })
-        Write-RunLog ("{0}: FAIL - no target differs from current value {1}" -f $testId, $beforeObserved) "ERROR"
-        continue
+    $requiredTarget = Get-RequiredTarget -Test $test
+    if ($null -ne $requiredTarget) {
+        $variant = $requiredTarget
+
+        if (Test-ObservedMatchesExpected `
+                -Variable ([string]$test.variable) `
+                -Observed $beforeObserved `
+                -Expected ([string]$requiredTarget.expected) `
+                -Tolerance ([double]$test.tolerance)) {
+
+            $precondition = Get-TestPrecondition -Test $test
+            if ($null -eq $precondition) {
+                $results.Add([pscustomobject][ordered]@{
+                    TestId = $testId; Suite = $Suite; Language = [string]$test.language; Phrase = [string]$requiredTarget.phrase;
+                    RecognizedText = ""; CommandFeedback = ""; SynthesizerVoice = ""; SpeechRate = 0; InjectionElapsedMs = 0;
+                    Variable = [string]$test.variable; Before = [string]$beforeObserved; Expected = [string]$requiredTarget.expected; Observed = [string]$beforeObserved;
+                    Tolerance = [double]$test.tolerance; Attempts = 0; LatencySeconds = 0; Passed = $false;
+                    Message = "Required target already matched current simulator value and no deterministic precondition was configured."; OracleDirectory = $testRoot
+                })
+                Write-RunLog ("{0}: FAIL - required target already matched and no precondition was configured." -f $testId) "ERROR"
+                continue
+            }
+
+            $preconditionResult = Invoke-InternalAudioPrecondition -Test $test -Variant $precondition -TestRoot $testRoot
+            if (-not [bool]$preconditionResult.Passed) {
+                $results.Add([pscustomobject][ordered]@{
+                    TestId = $testId; Suite = $Suite; Language = [string]$test.language; Phrase = [string]$requiredTarget.phrase;
+                    RecognizedText = ""; CommandFeedback = ""; SynthesizerVoice = ""; SpeechRate = 0; InjectionElapsedMs = 0;
+                    Variable = [string]$test.variable; Before = [string]$beforeObserved; Expected = [string]$requiredTarget.expected; Observed = [string]$preconditionResult.Observed;
+                    Tolerance = [double]$test.tolerance; Attempts = 0; LatencySeconds = 0; Passed = $false;
+                    Message = "Could not establish deterministic precondition: " + [string]$preconditionResult.Message; OracleDirectory = [string]$preconditionResult.Directory
+                })
+                Write-RunLog ("{0}: FAIL - deterministic precondition failed: {1}" -f $testId, [string]$preconditionResult.Message) "ERROR"
+                continue
+            }
+
+            $preparedDirectory = Join-Path $testRoot "before-after-precondition"
+            $preparedRun = Invoke-OracleSync -Mode "Snapshot" -Directory $preparedDirectory -TimeoutSeconds 20 -IntervalMs 500 -UseNoBuild
+            $preparedReport = Read-OracleReport -Path $preparedRun.ReportPath
+            if ($preparedRun.ExitCode -ne 0 -or $null -eq $preparedReport -or @($preparedReport.Snapshots).Count -eq 0) {
+                $results.Add([pscustomobject][ordered]@{
+                    TestId = $testId; Suite = $Suite; Language = [string]$test.language; Phrase = [string]$requiredTarget.phrase;
+                    RecognizedText = ""; CommandFeedback = ""; SynthesizerVoice = ""; SpeechRate = 0; InjectionElapsedMs = 0;
+                    Variable = [string]$test.variable; Before = [string]$beforeObserved; Expected = [string]$requiredTarget.expected; Observed = "";
+                    Tolerance = [double]$test.tolerance; Attempts = 0; LatencySeconds = 0; Passed = $false;
+                    Message = "Precondition succeeded but the post-precondition Oracle snapshot was unavailable."; OracleDirectory = $testRoot
+                })
+                Write-RunLog ("{0}: FAIL - post-precondition snapshot unavailable." -f $testId) "ERROR"
+                continue
+            }
+
+            $beforeSnapshot = @($preparedReport.Snapshots)[-1]
+            $beforeObserved = Get-SnapshotObservedValue -Snapshot $beforeSnapshot -Variable ([string]$test.variable)
+        }
+    }
+    else {
+        $variant = Select-TestVariant -Test $test -Observed $beforeObserved
+
+        if ($null -eq $variant) {
+            $results.Add([pscustomobject][ordered]@{
+                TestId = $testId; Suite = $Suite; Language = [string]$test.language; Phrase = "";
+                RecognizedText = ""; CommandFeedback = ""; SynthesizerVoice = ""; SpeechRate = 0; InjectionElapsedMs = 0;
+                Variable = [string]$test.variable; Before = [string]$beforeObserved; Expected = ""; Observed = [string]$beforeObserved;
+                Tolerance = [double]$test.tolerance; Attempts = 0; LatencySeconds = 0; Passed = $false;
+                Message = "All configured target variants already matched the current simulator value; no valid precondition was available."; OracleDirectory = $testRoot
+            })
+            Write-RunLog ("{0}: FAIL - no target differs from current value {1}" -f $testId, $beforeObserved) "ERROR"
+            continue
+        }
     }
 
     $phrase = [string]$variant.phrase
@@ -853,11 +1131,19 @@ foreach ($test in $tests) {
             if ($retryBeforeRun.ExitCode -eq 0 -and $null -ne $retryBeforeReport -and @($retryBeforeReport.Snapshots).Count -gt 0) {
                 $retrySnapshot = @($retryBeforeReport.Snapshots)[-1]
                 $beforeObserved = Get-SnapshotObservedValue -Snapshot $retrySnapshot -Variable ([string]$test.variable)
-                $retryVariant = Select-TestVariant -Test $test -Observed $beforeObserved
-                if ($null -ne $retryVariant) {
-                    $variant = $retryVariant
+                $retryRequiredTarget = Get-RequiredTarget -Test $test
+                if ($null -ne $retryRequiredTarget) {
+                    $variant = $retryRequiredTarget
                     $phrase = [string]$variant.phrase
                     $expected = [string]$variant.expected
+                }
+                else {
+                    $retryVariant = Select-TestVariant -Test $test -Observed $beforeObserved
+                    if ($null -ne $retryVariant) {
+                        $variant = $retryVariant
+                        $phrase = [string]$variant.phrase
+                        $expected = [string]$variant.expected
+                    }
                 }
             }
         }
@@ -896,9 +1182,30 @@ foreach ($test in $tests) {
             if (-not [bool]$injection.Success) {
                 $injectionError = [string]$injection.Error
             }
+
+            # Persist the bridge response before any later failure/cancellation.
+            $bridgeEvidence = [ordered]@{
+                TestId = $testId
+                Attempt = $attempt
+                Phrase = $phrase
+                SpeechRate = $speechRate
+                Success = [bool]$injection.Success
+                RecognizedText = $recognizedText
+                CommandFeedback = $commandFeedback
+                Error = [string]$injection.Error
+                SynthesizerVoice = $synthesizerVoice
+                ElapsedMs = $injectionElapsedMs
+                CapturedAtLocal = (Get-Date).ToString("o")
+            }
+            $bridgeEvidence |
+                ConvertTo-Json -Depth 8 |
+                Set-Content -LiteralPath (Join-Path $attemptDirectory "internal-audio-response.json") -Encoding UTF8
+
             Write-Host ("Recognized: {0}" -f $recognizedText) -ForegroundColor Cyan
             Write-Host ("Feedback  : {0}" -f $commandFeedback) -ForegroundColor DarkGray
             Write-Host ("TTS voice : {0}" -f $synthesizerVoice) -ForegroundColor DarkGray
+            Write-RunLog ("{0}: bridge attempt={1} speechRate={2} success={3} recognized='{4}' feedback='{5}' error='{6}'" -f `
+                $testId, $attempt, $speechRate, [bool]$injection.Success, $recognizedText, $commandFeedback, [string]$injection.Error)
         }
         catch {
             $injectionError = $_.Exception.Message
@@ -974,6 +1281,7 @@ foreach ($test in $tests) {
 
     $results.Add([pscustomobject][ordered]@{
         TestId = $testId
+        Category = if ($null -ne $test.PSObject.Properties["category"]) { [string]$test.category } else { "" }
         Suite = $Suite
         Language = [string]$test.language
         Phrase = $phrase
@@ -993,6 +1301,10 @@ foreach ($test in $tests) {
         Message = $message
         OracleDirectory = $lastAttemptDirectory
     })
+
+    if ($passed -and -not $aborted) {
+        Wait-QaHumanPace -Reason ("after " + $testId)
+    }
 
     if ($aborted) {
         Write-Host "ABORTED: SimVoice Copilot exited. Remaining command cases were not executed." -ForegroundColor Red
