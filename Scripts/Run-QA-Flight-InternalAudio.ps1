@@ -1071,7 +1071,7 @@ namespace SimVoiceQa
 "@ -Language CSharp
 }
 
-Write-RunLog "SimVoice Copilot QA Phase 2.3.5 — HF36-R21 QA8 Deterministic MSIX Activation"
+Write-RunLog "SimVoice Copilot QA Phase 2.3.6 — HF36-R21-R2 QA9 Principal Spanish Gate"
 Write-RunLog ("Suite: {0}" -f $Suite)
 Write-RunLog ("Output: {0}" -f $OutputDirectory)
 
@@ -1089,8 +1089,8 @@ $suiteCatalogCount = $tests.Count
 if ($Suite -eq "CoreInternalEN" -and $suiteCatalogCount -ne 36) {
     throw "HF36-R14 CoreInternalEN gate must contain exactly 36 cases; catalog contains $suiteCatalogCount."
 }
-if ($Suite -eq "CoreInternalES" -and $suiteCatalogCount -ne 30) {
-    throw "HF36-R14 CoreInternalES gate must contain exactly 30 cases; catalog contains $suiteCatalogCount."
+if ($Suite -eq "CoreInternalES" -and $suiteCatalogCount -ne 50) {
+    throw "HF36-R21-R2 QA9 CoreInternalES principal Spanish gate must contain exactly 50 cases; catalog contains $suiteCatalogCount."
 }
 if ($Suite -eq "NoConnectorInternalEN" -and $suiteCatalogCount -ne 30) {
     throw "HF36-R17 NoConnectorInternalEN gate must contain exactly 30 cases; catalog contains $suiteCatalogCount."

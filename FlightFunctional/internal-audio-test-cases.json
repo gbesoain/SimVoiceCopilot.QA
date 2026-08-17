@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "description": "Unattended internal-audio end-to-end tests. SimVoice synthesizes PCM in memory, feeds the normal Vosk pipeline, and the independent SimConnect Oracle validates the real MSFS result. Schema v3 adds deterministic requiredTarget/precondition cases and independent COM1/COM2/NAV1/NAV2 frequency assertions. HF36-R17 QA2 adds NoConnectorInternalEN: 30 deterministic English cases mirroring Heading/Altitude/VerticalSpeed/Transponder Core coverage with the optional connector 'to' omitted. HF36-R20 QA7 adds SyntaxVariantsInternalEN: 26 final English end-to-end syntax/alias/unit cases, including selected airspeed Oracle verification.",
+  "description": "Unattended internal-audio end-to-end tests. SimVoice synthesizes PCM in memory, feeds the normal Vosk pipeline, and the independent SimConnect Oracle validates the real MSFS result. Schema v3 adds deterministic requiredTarget/precondition cases and independent COM1/COM2/NAV1/NAV2 frequency assertions. HF36-R17 QA2 adds NoConnectorInternalEN: 30 deterministic English cases mirroring Heading/Altitude/VerticalSpeed/Transponder Core coverage with the optional connector 'to' omitted. HF36-R20 QA7 adds SyntaxVariantsInternalEN: 26 final English end-to-end syntax/alias/unit cases, including selected airspeed Oracle verification. HF36-R21-R2 QA9 expands CoreInternalES to a 50-case principal Spanish end-to-end gate covering Heading, Altitude, Airspeed, Vertical Speed, COM1/COM2 active/standby, NAV1/NAV2 active/standby, decimal/punto, optional value connectors/units, and Transponder.",
   "suites": {
     "SmokeInternalEN": [
       {
@@ -906,7 +906,8 @@
     ],
     "CoreInternalES": [
       {
-        "id": "HDG-ES-005",
+        "id": "ES-HDG-005",
+        "category": "Heading",
         "type": "value",
         "language": "es-ES",
         "variable": "HeadingBug",
@@ -926,7 +927,8 @@
         ]
       },
       {
-        "id": "HDG-ES-090",
+        "id": "ES-HDG-090",
+        "category": "Heading",
         "type": "value",
         "language": "es-ES",
         "variable": "HeadingBug",
@@ -946,7 +948,8 @@
         ]
       },
       {
-        "id": "HDG-ES-180",
+        "id": "ES-HDG-180-DEG",
+        "category": "Heading",
         "type": "value",
         "language": "es-ES",
         "variable": "HeadingBug",
@@ -966,7 +969,50 @@
         ]
       },
       {
-        "id": "HDG-ES-275",
+        "id": "ES-HDG-220",
+        "category": "Heading",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "requiredTarget": {
+          "phrase": "Establecer rumbo dos dos cero",
+          "expected": "220"
+        },
+        "precondition": {
+          "phrase": "Establecer rumbo uno ocho cero",
+          "expected": "180"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-HDG-270-WORDS",
+        "category": "Heading",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "HeadingBug",
+        "tolerance": 2,
+        "timeoutSeconds": 30,
+        "requiredTarget": {
+          "phrase": "Establecer rumbo doscientos setenta",
+          "expected": "270"
+        },
+        "precondition": {
+          "phrase": "Establecer rumbo uno ocho cero",
+          "expected": "180"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-HDG-275-ADJUST",
+        "category": "Heading",
         "type": "value",
         "language": "es-ES",
         "variable": "HeadingBug",
@@ -986,19 +1032,20 @@
         ]
       },
       {
-        "id": "HDG-ES-359",
+        "id": "ES-HDG-359",
+        "category": "Heading",
         "type": "value",
         "language": "es-ES",
         "variable": "HeadingBug",
         "tolerance": 2,
         "timeoutSeconds": 30,
         "requiredTarget": {
-          "phrase": "Establecer rumbo tres cinco nueve grados",
+          "phrase": "Ajustar el rumbo tres cinco nueve grados",
           "expected": "359"
         },
         "precondition": {
-          "phrase": "Establecer rumbo cero cero cinco",
-          "expected": "5"
+          "phrase": "Establecer rumbo uno ocho cero",
+          "expected": "180"
         },
         "speechRates": [
           0,
@@ -1006,12 +1053,13 @@
         ]
       },
       {
-        "id": "ALT-ES-1000",
+        "id": "ES-ALT-1000",
+        "category": "Altitude",
         "type": "value",
         "language": "es-ES",
         "variable": "SelectedAltitude",
         "tolerance": 100,
-        "timeoutSeconds": 30,
+        "timeoutSeconds": 35,
         "requiredTarget": {
           "phrase": "Seleccionar altitud mil",
           "expected": "1000"
@@ -1026,19 +1074,20 @@
         ]
       },
       {
-        "id": "ALT-ES-2500",
+        "id": "ES-ALT-2500",
+        "category": "Altitude",
         "type": "value",
         "language": "es-ES",
         "variable": "SelectedAltitude",
         "tolerance": 100,
-        "timeoutSeconds": 30,
+        "timeoutSeconds": 35,
         "requiredTarget": {
           "phrase": "Establecer altitud dos mil quinientos",
           "expected": "2500"
         },
         "precondition": {
-          "phrase": "Establecer altitud tres mil quinientos",
-          "expected": "3500"
+          "phrase": "Establecer altitud cuatro mil",
+          "expected": "4000"
         },
         "speechRates": [
           0,
@@ -1046,12 +1095,55 @@
         ]
       },
       {
-        "id": "ALT-ES-3500",
+        "id": "ES-ALT-3300-WORDS",
+        "category": "Altitude",
         "type": "value",
         "language": "es-ES",
         "variable": "SelectedAltitude",
         "tolerance": 100,
-        "timeoutSeconds": 30,
+        "timeoutSeconds": 35,
+        "requiredTarget": {
+          "phrase": "Establecer altitud tres mil trescientos",
+          "expected": "3300"
+        },
+        "precondition": {
+          "phrase": "Establecer altitud cuatro mil",
+          "expected": "4000"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-ALT-3300-DIGITS",
+        "category": "Altitude",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
+        "requiredTarget": {
+          "phrase": "Establecer altitud tres tres cero cero",
+          "expected": "3300"
+        },
+        "precondition": {
+          "phrase": "Establecer altitud cinco mil",
+          "expected": "5000"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-ALT-3500",
+        "category": "Altitude",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
         "requiredTarget": {
           "phrase": "Establecer la altitud tres mil quinientos",
           "expected": "3500"
@@ -1066,12 +1158,13 @@
         ]
       },
       {
-        "id": "ALT-ES-6000",
+        "id": "ES-ALT-6000",
+        "category": "Altitude",
         "type": "value",
         "language": "es-ES",
         "variable": "SelectedAltitude",
         "tolerance": 100,
-        "timeoutSeconds": 30,
+        "timeoutSeconds": 35,
         "requiredTarget": {
           "phrase": "Establecer altitud seis mil",
           "expected": "6000"
@@ -1086,12 +1179,13 @@
         ]
       },
       {
-        "id": "ALT-ES-6500",
+        "id": "ES-ALT-6500",
+        "category": "Altitude",
         "type": "value",
         "language": "es-ES",
         "variable": "SelectedAltitude",
         "tolerance": 100,
-        "timeoutSeconds": 30,
+        "timeoutSeconds": 35,
         "requiredTarget": {
           "phrase": "Establecer altitud seis mil quinientos",
           "expected": "6500"
@@ -1106,12 +1200,34 @@
         ]
       },
       {
-        "id": "ALT-ES-12000",
+        "id": "ES-ALT-8000-AL",
+        "category": "Altitude",
         "type": "value",
         "language": "es-ES",
         "variable": "SelectedAltitude",
         "tolerance": 100,
-        "timeoutSeconds": 30,
+        "timeoutSeconds": 35,
+        "requiredTarget": {
+          "phrase": "Establecer altitud al ocho mil",
+          "expected": "8000"
+        },
+        "precondition": {
+          "phrase": "Establecer altitud cinco mil",
+          "expected": "5000"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-ALT-12000-FEET",
+        "category": "Altitude",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 35,
         "requiredTarget": {
           "phrase": "Seleccionar altitud doce mil pies",
           "expected": "12000"
@@ -1126,7 +1242,134 @@
         ]
       },
       {
-        "id": "VS-ES-DOWN-1500",
+        "id": "ES-ALT-21500",
+        "category": "Altitude",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAltitude",
+        "tolerance": 100,
+        "timeoutSeconds": 40,
+        "requiredTarget": {
+          "phrase": "Establecer altitud veintiún mil quinientos por favor",
+          "expected": "21500"
+        },
+        "precondition": {
+          "phrase": "Establecer altitud doce mil",
+          "expected": "12000"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-SPD-140",
+        "category": "Airspeed",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAirspeed",
+        "tolerance": 1,
+        "timeoutSeconds": 30,
+        "requiredTarget": {
+          "phrase": "Establecer velocidad uno cuatro cero",
+          "expected": "140"
+        },
+        "precondition": {
+          "phrase": "Establecer velocidad uno ocho cero",
+          "expected": "180"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-SPD-160",
+        "category": "Airspeed",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAirspeed",
+        "tolerance": 1,
+        "timeoutSeconds": 30,
+        "requiredTarget": {
+          "phrase": "Seleccionar velocidad uno seis cero",
+          "expected": "160"
+        },
+        "precondition": {
+          "phrase": "Establecer velocidad dos uno cero",
+          "expected": "210"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-SPD-180-INDICATED",
+        "category": "Airspeed",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAirspeed",
+        "tolerance": 1,
+        "timeoutSeconds": 30,
+        "requiredTarget": {
+          "phrase": "Establecer velocidad indicada uno ocho cero",
+          "expected": "180"
+        },
+        "precondition": {
+          "phrase": "Establecer velocidad uno cuatro cero",
+          "expected": "140"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-SPD-190-KNOTS",
+        "category": "Airspeed",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAirspeed",
+        "tolerance": 1,
+        "timeoutSeconds": 30,
+        "requiredTarget": {
+          "phrase": "Establecer la velocidad a uno nueve cero nudos",
+          "expected": "190"
+        },
+        "precondition": {
+          "phrase": "Establecer velocidad uno cuatro cero",
+          "expected": "140"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-SPD-210-KNOTS",
+        "category": "Airspeed",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedAirspeed",
+        "tolerance": 1,
+        "timeoutSeconds": 30,
+        "requiredTarget": {
+          "phrase": "Seleccionar la velocidad dos uno cero nudos",
+          "expected": "210"
+        },
+        "precondition": {
+          "phrase": "Establecer velocidad uno seis cero",
+          "expected": "160"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-VS-DESC-1500",
+        "category": "VerticalSpeed",
         "type": "value",
         "language": "es-ES",
         "variable": "SelectedVerticalSpeed",
@@ -1146,14 +1389,15 @@
         ]
       },
       {
-        "id": "VS-ES-MINUS-1000",
+        "id": "ES-VS-MINUS-1000-FPM",
+        "category": "VerticalSpeed",
         "type": "value",
         "language": "es-ES",
         "variable": "SelectedVerticalSpeed",
         "tolerance": 100,
         "timeoutSeconds": 30,
         "requiredTarget": {
-          "phrase": "Establecer velocidad vertical menos mil",
+          "phrase": "Establecer velocidad vertical menos mil pies por minuto",
           "expected": "-1000"
         },
         "precondition": {
@@ -1166,7 +1410,29 @@
         ]
       },
       {
-        "id": "VS-ES-ZERO",
+        "id": "ES-VS-MINUS-600",
+        "category": "VerticalSpeed",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 30,
+        "requiredTarget": {
+          "phrase": "Establecer velocidad vertical menos seiscientos",
+          "expected": "-600"
+        },
+        "precondition": {
+          "phrase": "Establecer velocidad vertical quinientos",
+          "expected": "500"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-VS-ZERO",
+        "category": "VerticalSpeed",
         "type": "value",
         "language": "es-ES",
         "variable": "SelectedVerticalSpeed",
@@ -1186,7 +1452,8 @@
         ]
       },
       {
-        "id": "VS-ES-PLUS-500",
+        "id": "ES-VS-PLUS-500",
+        "category": "VerticalSpeed",
         "type": "value",
         "language": "es-ES",
         "variable": "SelectedVerticalSpeed",
@@ -1206,15 +1473,58 @@
         ]
       },
       {
-        "id": "VS-ES-UP-1500",
+        "id": "ES-VS-CLIMB-1200",
+        "category": "VerticalSpeed",
         "type": "value",
         "language": "es-ES",
         "variable": "SelectedVerticalSpeed",
         "tolerance": 100,
         "timeoutSeconds": 30,
         "requiredTarget": {
-          "phrase": "Establecer regimen de ascenso mil quinientos",
-          "expected": "1500"
+          "phrase": "Establecer regimen de ascenso mil doscientos",
+          "expected": "1200"
+        },
+        "precondition": {
+          "phrase": "Establecer velocidad vertical menos quinientos",
+          "expected": "-500"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-VS-SPEED-UP-1200",
+        "category": "VerticalSpeed",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 30,
+        "requiredTarget": {
+          "phrase": "Establecer velocidad de ascenso mil doscientos",
+          "expected": "1200"
+        },
+        "precondition": {
+          "phrase": "Establecer velocidad vertical menos quinientos",
+          "expected": "-500"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-VS-SELECT-DESC-700",
+        "category": "VerticalSpeed",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "SelectedVerticalSpeed",
+        "tolerance": 100,
+        "timeoutSeconds": 30,
+        "requiredTarget": {
+          "phrase": "Seleccionar regimen de descenso setecientos",
+          "expected": "-700"
         },
         "precondition": {
           "phrase": "Establecer velocidad vertical quinientos",
@@ -1226,7 +1536,8 @@
         ]
       },
       {
-        "id": "COM1-ES-ACTIVE-118600",
+        "id": "ES-COM1-ACTIVE-118600",
+        "category": "Radio",
         "type": "value",
         "language": "es-ES",
         "variable": "Com1Active",
@@ -1246,7 +1557,8 @@
         ]
       },
       {
-        "id": "COM1-ES-ACTIVE-124850",
+        "id": "ES-COM1-ACTIVE-124850",
+        "category": "Radio",
         "type": "value",
         "language": "es-ES",
         "variable": "Com1Active",
@@ -1266,7 +1578,29 @@
         ]
       },
       {
-        "id": "COM1-ES-STBY-127850",
+        "id": "ES-COM1-ACTIVE-POINT-121500",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com1Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 30,
+        "requiredTarget": {
+          "phrase": "Establecer frecuencia com uno a uno dos uno punto cinco",
+          "expected": "121.5"
+        },
+        "precondition": {
+          "phrase": "Establecer radio uno uno ocho decimal seis",
+          "expected": "118.6"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-COM1-STBY-127850",
+        "category": "Radio",
         "type": "value",
         "language": "es-ES",
         "variable": "Com1Standby",
@@ -1286,7 +1620,8 @@
         ]
       },
       {
-        "id": "COM2-ES-ACTIVE-119200",
+        "id": "ES-COM2-ACTIVE-119200",
+        "category": "Radio",
         "type": "value",
         "language": "es-ES",
         "variable": "Com2Active",
@@ -1306,7 +1641,29 @@
         ]
       },
       {
-        "id": "COM2-ES-STBY-123450",
+        "id": "ES-COM2-ACTIVE-134700",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com2Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 30,
+        "requiredTarget": {
+          "phrase": "Sintonizar com dos uno tres cuatro decimal siete",
+          "expected": "134.7"
+        },
+        "precondition": {
+          "phrase": "Establecer com dos uno uno nueve decimal dos",
+          "expected": "119.2"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-COM2-STBY-123450",
+        "category": "Radio",
         "type": "value",
         "language": "es-ES",
         "variable": "Com2Standby",
@@ -1326,7 +1683,8 @@
         ]
       },
       {
-        "id": "NAV1-ES-ACTIVE-11050",
+        "id": "ES-NAV1-ACTIVE-110500",
+        "category": "Radio",
         "type": "value",
         "language": "es-ES",
         "variable": "Nav1Active",
@@ -1346,7 +1704,29 @@
         ]
       },
       {
-        "id": "NAV1-ES-STBY-11170",
+        "id": "ES-NAV1-ACTIVE-POINT-108200",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav1Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 30,
+        "requiredTarget": {
+          "phrase": "Establecer frecuencia nav uno cero ocho punto dos",
+          "expected": "108.2"
+        },
+        "precondition": {
+          "phrase": "Establecer nav uno uno uno cero decimal cinco",
+          "expected": "110.5"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-NAV1-STBY-111700",
+        "category": "Radio",
         "type": "value",
         "language": "es-ES",
         "variable": "Nav1Standby",
@@ -1366,7 +1746,8 @@
         ]
       },
       {
-        "id": "NAV2-ES-ACTIVE-11530",
+        "id": "ES-NAV2-ACTIVE-115300",
+        "category": "Radio",
         "type": "value",
         "language": "es-ES",
         "variable": "Nav2Active",
@@ -1386,7 +1767,8 @@
         ]
       },
       {
-        "id": "NAV2-ES-STBY-11790",
+        "id": "ES-NAV2-STBY-117900",
+        "category": "Radio",
         "type": "value",
         "language": "es-ES",
         "variable": "Nav2Standby",
@@ -1406,7 +1788,8 @@
         ]
       },
       {
-        "id": "XPDR-ES-0000",
+        "id": "ES-XPDR-0000",
+        "category": "Transponder",
         "type": "value",
         "language": "es-ES",
         "variable": "Transponder",
@@ -1426,7 +1809,8 @@
         ]
       },
       {
-        "id": "XPDR-ES-1200",
+        "id": "ES-XPDR-1200",
+        "category": "Transponder",
         "type": "value",
         "language": "es-ES",
         "variable": "Transponder",
@@ -1446,7 +1830,29 @@
         ]
       },
       {
-        "id": "XPDR-ES-4321",
+        "id": "ES-XPDR-3415-SELECT",
+        "category": "Transponder",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "requiredTarget": {
+          "phrase": "Seleccionar codigo tres cuatro uno cinco",
+          "expected": "3415"
+        },
+        "precondition": {
+          "phrase": "Establecer transpondedor uno dos cero cero",
+          "expected": "1200"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-XPDR-4321-CODE",
+        "category": "Transponder",
         "type": "value",
         "language": "es-ES",
         "variable": "Transponder",
@@ -1466,7 +1872,8 @@
         ]
       },
       {
-        "id": "XPDR-ES-7000",
+        "id": "ES-XPDR-7000-SQUAWK",
+        "category": "Transponder",
         "type": "value",
         "language": "es-ES",
         "variable": "Transponder",
@@ -1486,7 +1893,8 @@
         ]
       },
       {
-        "id": "XPDR-ES-7700",
+        "id": "ES-XPDR-7700",
+        "category": "Transponder",
         "type": "value",
         "language": "es-ES",
         "variable": "Transponder",
@@ -1495,6 +1903,48 @@
         "requiredTarget": {
           "phrase": "Establecer transpondedor siete siete cero cero",
           "expected": "7700"
+        },
+        "precondition": {
+          "phrase": "Establecer transpondedor uno dos cero cero",
+          "expected": "1200"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-XPDR-2000-CODE",
+        "category": "Transponder",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "requiredTarget": {
+          "phrase": "Codigo transponder dos cero cero cero",
+          "expected": "2000"
+        },
+        "precondition": {
+          "phrase": "Establecer transpondedor uno dos cero cero",
+          "expected": "1200"
+        },
+        "speechRates": [
+          0,
+          -2
+        ]
+      },
+      {
+        "id": "ES-XPDR-7500-REPLY",
+        "category": "Transponder",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Transponder",
+        "tolerance": 0,
+        "timeoutSeconds": 30,
+        "requiredTarget": {
+          "phrase": "Establecer codigo de respuesta siete cinco cero cero",
+          "expected": "7500"
         },
         "precondition": {
           "phrase": "Establecer transpondedor uno dos cero cero",
