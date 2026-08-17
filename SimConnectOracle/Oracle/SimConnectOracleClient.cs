@@ -125,6 +125,8 @@ namespace SimVoiceCopilot.QA.SimConnectOracle.Oracle
             AddFloat64("AUTOPILOT HEADING LOCK DIR", "degrees");
             AddFloat64("AUTOPILOT ALTITUDE LOCK", "Bool");
             AddFloat64("AUTOPILOT ALTITUDE LOCK VAR", "feet");
+            // HF36-R20 QA7: target selected speed for AP_SPD_VAR_SET verification.
+            AddFloat64("AUTOPILOT AIRSPEED HOLD VAR", "knots");
             AddFloat64("AUTOPILOT VERTICAL HOLD", "Bool");
             AddFloat64("AUTOPILOT VERTICAL HOLD VAR", "feet per minute");
 

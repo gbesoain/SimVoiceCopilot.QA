@@ -1,9 +1,9 @@
 ﻿[CmdletBinding()]
 param(
-    [ValidateSet("SmokeInternalEN", "CoreInternalEN", "NoConnectorInternalEN", "ExtendedRadioInternalEN", "RecognitionStressInternalEN", "SmokeInternalES", "CoreInternalES")]
+    [ValidateSet("SmokeInternalEN", "CoreInternalEN", "NoConnectorInternalEN", "ExtendedRadioInternalEN", "RecognitionStressInternalEN", "SyntaxVariantsInternalEN", "SmokeInternalES", "CoreInternalES")]
     [string]$Suite = "SmokeInternalEN",
 
-    [ValidateSet("Heading", "Altitude", "VerticalSpeed", "Radio", "Transponder")]
+    [ValidateSet("Heading", "Altitude", "Airspeed", "VerticalSpeed", "Radio", "Transponder")]
     [string[]]$Category = @(),
 
     [string]$AppNamePattern = "*SimVoice*",
@@ -389,6 +389,7 @@ function Get-SnapshotObservedValue {
     $propertyMap = @{
         "HeadingBug" = "HeadingBugDegrees"
         "SelectedAltitude" = "SelectedAltitudeFeet"
+        "SelectedAirspeed" = "SelectedAirspeedKnots"
         "SelectedVerticalSpeed" = "SelectedVerticalSpeedFpm"
         "Com1Active" = "Com1ActiveFrequencyMHz"
         "Com1Standby" = "Com1StandbyFrequencyMHz"
@@ -984,6 +985,9 @@ if ($Suite -eq "CoreInternalES" -and $suiteCatalogCount -ne 30) {
 }
 if ($Suite -eq "NoConnectorInternalEN" -and $suiteCatalogCount -ne 30) {
     throw "HF36-R17 NoConnectorInternalEN gate must contain exactly 30 cases; catalog contains $suiteCatalogCount."
+}
+if ($Suite -eq "SyntaxVariantsInternalEN" -and $suiteCatalogCount -ne 26) {
+    throw "HF36-R20 QA7 SyntaxVariantsInternalEN gate must contain exactly 26 cases; catalog contains $suiteCatalogCount."
 }
 
 if ($Category.Count -gt 0) {

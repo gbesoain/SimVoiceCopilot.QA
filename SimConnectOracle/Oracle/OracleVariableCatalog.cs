@@ -33,6 +33,7 @@ namespace SimVoiceCopilot.QA.SimConnectOracle.Oracle
             "HeadingBug",
             "AltitudeHold",
             "SelectedAltitude",
+            "SelectedAirspeed",
             "VerticalSpeedHold",
             "SelectedVerticalSpeed",
             "Com1Active",

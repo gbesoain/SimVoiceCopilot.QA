@@ -24,6 +24,7 @@ namespace SimVoiceCopilot.QA.SimConnectOracle.Oracle
         public double AutopilotHeadingLockDirDegrees;
         public double AutopilotAltitudeLock;
         public double AutopilotAltitudeLockVarFeet;
+        public double AutopilotAirspeedHoldVarKnots;
         public double AutopilotVerticalHold;
         public double AutopilotVerticalHoldVarFpm;
         public double Com1ActiveFrequencyMHz;
@@ -82,6 +83,7 @@ namespace SimVoiceCopilot.QA.SimConnectOracle.Oracle
         public double HeadingBugDegrees { get; set; }
         public bool AltitudeHold { get; set; }
         public double SelectedAltitudeFeet { get; set; }
+        public double SelectedAirspeedKnots { get; set; }
         public bool VerticalSpeedHold { get; set; }
         public double SelectedVerticalSpeedFpm { get; set; }
         public double Com1ActiveFrequencyMHz { get; set; }
@@ -145,6 +147,7 @@ namespace SimVoiceCopilot.QA.SimConnectOracle.Oracle
                 HeadingBugDegrees = NormalizeHeading(data.AutopilotHeadingLockDirDegrees),
                 AltitudeHold = ToBool(data.AutopilotAltitudeLock),
                 SelectedAltitudeFeet = data.AutopilotAltitudeLockVarFeet,
+                SelectedAirspeedKnots = data.AutopilotAirspeedHoldVarKnots,
                 VerticalSpeedHold = ToBool(data.AutopilotVerticalHold),
                 SelectedVerticalSpeedFpm = data.AutopilotVerticalHoldVarFpm,
                 Com1ActiveFrequencyMHz = data.Com1ActiveFrequencyMHz,
@@ -206,6 +209,7 @@ namespace SimVoiceCopilot.QA.SimConnectOracle.Oracle
                 { "HeadingBug", HeadingBugDegrees },
                 { "AltitudeHold", AltitudeHold },
                 { "SelectedAltitude", SelectedAltitudeFeet },
+                { "SelectedAirspeed", SelectedAirspeedKnots },
                 { "VerticalSpeedHold", VerticalSpeedHold },
                 { "SelectedVerticalSpeed", SelectedVerticalSpeedFpm },
                 { "Com1Active", Com1ActiveFrequencyMHz },
@@ -260,6 +264,7 @@ namespace SimVoiceCopilot.QA.SimConnectOracle.Oracle
                 "Plane heading      : " + PlaneHeadingMagneticDegrees.ToString("F1", CultureInfo.InvariantCulture) + " deg",
                 "Heading bug        : " + HeadingBugDegrees.ToString("F1", CultureInfo.InvariantCulture) + " deg",
                 "Selected altitude  : " + SelectedAltitudeFeet.ToString("F1", CultureInfo.InvariantCulture) + " ft",
+                "Selected airspeed  : " + SelectedAirspeedKnots.ToString("F1", CultureInfo.InvariantCulture) + " kt",
                 "Selected VS        : " + SelectedVerticalSpeedFpm.ToString("F1", CultureInfo.InvariantCulture) + " ft/min",
                 "COM1 active/standby: " + Com1ActiveFrequencyMHz.ToString("F3", CultureInfo.InvariantCulture) + " / " + Com1StandbyFrequencyMHz.ToString("F3", CultureInfo.InvariantCulture) + " MHz",
                 "COM2 active/standby: " + Com2ActiveFrequencyMHz.ToString("F3", CultureInfo.InvariantCulture) + " / " + Com2StandbyFrequencyMHz.ToString("F3", CultureInfo.InvariantCulture) + " MHz",
