@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "description": "Unattended internal-audio end-to-end tests. SimVoice synthesizes PCM in memory, feeds the normal Vosk pipeline, and the independent SimConnect Oracle validates the real MSFS result. Schema v3 adds deterministic requiredTarget/precondition cases and independent COM1/COM2/NAV1/NAV2 frequency assertions. HF36-R17 QA2 adds NoConnectorInternalEN: 30 deterministic English cases mirroring Heading/Altitude/VerticalSpeed/Transponder Core coverage with the optional connector 'to' omitted. HF36-R20 QA7 adds SyntaxVariantsInternalEN: 26 final English end-to-end syntax/alias/unit cases, including selected airspeed Oracle verification. HF36-R21-R2 QA9 expands CoreInternalES to a 50-case principal Spanish end-to-end gate covering Heading, Altitude, Airspeed, Vertical Speed, COM1/COM2 active/standby, NAV1/NAV2 active/standby, decimal/punto, optional value connectors/units, and Transponder.",
+  "description": "Unattended internal-audio end-to-end tests. SimVoice synthesizes PCM in memory, feeds the normal Vosk pipeline, and the independent SimConnect Oracle validates the real MSFS result. Schema v3 adds deterministic requiredTarget/precondition cases and independent COM1/COM2/NAV1/NAV2 frequency assertions. HF36-R17 QA2 adds NoConnectorInternalEN: 30 deterministic English cases mirroring Heading/Altitude/VerticalSpeed/Transponder Core coverage with the optional connector 'to' omitted. HF36-R20 QA7 adds SyntaxVariantsInternalEN: 26 final English end-to-end syntax/alias/unit cases, including selected airspeed Oracle verification. HF36-R21-R2 QA9 expands CoreInternalES to a 50-case principal Spanish end-to-end gate covering Heading, Altitude, Airspeed, Vertical Speed, COM1/COM2 active/standby, NAV1/NAV2 active/standby, decimal/punto, optional value connectors/units, and Transponder. HF36-R23 QA10 corrects ES-NAV1-ACTIVE-POINT-108200 so NAV1 selector and the leading digit of 108.2 are both spoken explicitly.",
   "suites": {
     "SmokeInternalEN": [
       {
@@ -1712,7 +1712,7 @@
         "tolerance": 0.005,
         "timeoutSeconds": 30,
         "requiredTarget": {
-          "phrase": "Establecer frecuencia nav uno cero ocho punto dos",
+          "phrase": "Establecer frecuencia nav uno uno cero ocho punto dos",
           "expected": "108.2"
         },
         "precondition": {
