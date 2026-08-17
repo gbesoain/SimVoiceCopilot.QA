@@ -30,7 +30,7 @@ param(
     [ValidateRange(5, 120)]
     [int]$SpeechIdleTimeoutSeconds = 20,
 
-    # HF36-R24 QA11: when the Internal Audio bridge has already completed arbitration
+    # HF36-R25 QA12: when the Internal Audio bridge has already completed arbitration
     # and proves that no simulator command was executed, do not waste the full Oracle
     # timeout. A short pause is enough before the next synthesized retry.
     [ValidateRange(0, 3000)]
@@ -749,14 +749,41 @@ function Stop-And-WaitProcess {
     param([System.Diagnostics.Process]$Process)
 
     if ($null -eq $Process) { return }
+
+    $processId = 0
+    try { $processId = [int]$Process.Id } catch { return }
+
     try {
         $Process.Refresh()
-        if (-not $Process.HasExited) {
-            Stop-Process -Id $Process.Id -Force -ErrorAction SilentlyContinue
-            [void]$Process.WaitForExit(5000)
+        if ($Process.HasExited) { return }
+
+        # HF36-R25 QA12: kill the Windows PowerShell Oracle launcher and every
+        # descendant. Killing only the parent leaves SimVoiceCopilot.QA.SimConnectOracle
+        # alive until its 30-second timeout, which wastes resources and can write a
+        # late report containing simulator state from subsequent test cases.
+        $taskKill = Join-Path $env:WINDIR "System32\taskkill.exe"
+        if (Test-Path -LiteralPath $taskKill -PathType Leaf) {
+            & $taskKill /PID $processId /T /F *> $null
+            Write-RunLog ("QA12 PROCESS-TREE STOP: PID={0} and Oracle descendants." -f $processId)
         }
+        else {
+            Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+        }
+
+        try { [void]$Process.WaitForExit(5000) } catch { }
+
+        try {
+            $Process.Refresh()
+            if (-not $Process.HasExited) {
+                Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+                [void]$Process.WaitForExit(2000)
+            }
+        }
+        catch { }
     }
-    catch { }
+    catch {
+        try { Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue } catch { }
+    }
 }
 
 function Find-SimVoiceApp {
@@ -1173,7 +1200,7 @@ namespace SimVoiceQa
 "@ -Language CSharp
 }
 
-Write-RunLog "SimVoice Copilot QA Phase 2.3.7 — HF36-R24 QA11 Definitive Failure Fast-Fail"
+Write-RunLog "SimVoice Copilot QA Phase 2.3.8 — HF36-R25 QA12 Fast-Fail Process-Tree Cleanup"
 Write-RunLog ("Suite: {0}" -f $Suite)
 Write-RunLog ("Output: {0}" -f $OutputDirectory)
 
