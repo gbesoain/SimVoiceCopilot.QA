@@ -30,6 +30,12 @@ param(
     [ValidateRange(5, 120)]
     [int]$SpeechIdleTimeoutSeconds = 20,
 
+    # HF36-R24 QA11: when the Internal Audio bridge has already completed arbitration
+    # and proves that no simulator command was executed, do not waste the full Oracle
+    # timeout. A short pause is enough before the next synthesized retry.
+    [ValidateRange(0, 3000)]
+    [int]$DefinitiveFailureRetryPauseMs = 500,
+
     # HF36-R15: one-time QA-only settle after the internal bridge is ready. This
     # prevents the first synthesized command from landing on the product's normal
     # recognizer warm-up boundary; the product acceptance gate itself is unchanged.
@@ -171,6 +177,76 @@ function Wait-QaHumanPace {
 
     if ($InterCommandPauseMs -gt 0) {
         Start-Sleep -Milliseconds $InterCommandPauseMs
+    }
+}
+
+function Get-QaDefinitiveNoExecutionReason {
+    param(
+        [bool]$InjectionSuccess,
+        [string]$CommandFeedback
+    )
+
+    if (-not $InjectionSuccess) {
+        return ""
+    }
+
+    $feedback = if ($null -eq $CommandFeedback) { "" } else { $CommandFeedback.Trim() }
+
+    # In the Internal Audio protocol the synthesize response is returned only after
+    # deterministic arbitration for that utterance has completed. Every successful
+    # functional execution emits CommandFeedback. Therefore an empty feedback string
+    # is a definitive "no command executed", not a reason to keep polling SimConnect.
+    if ([string]::IsNullOrWhiteSpace($feedback)) {
+        return "Internal Audio arbitration completed without command feedback; no simulator command was executed."
+    }
+
+    if ($feedback.StartsWith(
+            "Listening for target value",
+            [System.StringComparison]::OrdinalIgnoreCase) -or
+        $feedback.IndexOf(
+            "Continue with the number",
+            [System.StringComparison]::OrdinalIgnoreCase) -ge 0)
+    {
+        return "Parameterized command was incomplete and entered target-value prompt mode."
+    }
+
+    return ""
+}
+
+function Clear-QaPendingValuePrompt {
+    param(
+        [string]$Language,
+        [string]$Reason
+    )
+
+    try {
+        $cancelWord = if ($Language.StartsWith("es", [System.StringComparison]::OrdinalIgnoreCase)) {
+            "cancelar"
+        }
+        else {
+            "cancel"
+        }
+
+        $cancel = Invoke-InternalAudioRequest `
+            -Action "synthesize" `
+            -Text $cancelWord `
+            -Language $Language `
+            -SpeechRate 0 `
+            -TimeoutMs 6000 `
+            -CorrelationId ("qa-fast-fail-cancel-" + [guid]::NewGuid().ToString("N"))
+
+        Write-RunLog (
+            "QA fast-fail: cleared pending value prompt ({0}); recognized='{1}' feedback='{2}' success={3}" -f
+                $Reason,
+                [string]$cancel.RecognizedText,
+                [string]$cancel.CommandFeedback,
+                [bool]$cancel.Success)
+    }
+    catch {
+        Write-RunLog (
+            "QA fast-fail: value-prompt cancellation failed ({0}): {1}" -f
+                $Reason,
+                $_.Exception.Message) "WARN"
     }
 }
 
@@ -576,6 +652,32 @@ function Invoke-InternalAudioPrecondition {
                 Passed = $false
                 Observed = ""
                 Message = "Internal-audio precondition injection failed: " + [string]$injection.Error
+                Directory = $directory
+            }
+        }
+
+        $definitivePreconditionFailure = Get-QaDefinitiveNoExecutionReason `
+            -InjectionSuccess ([bool]$injection.Success) `
+            -CommandFeedback ([string]$injection.CommandFeedback)
+
+        if (-not [string]::IsNullOrWhiteSpace($definitivePreconditionFailure)) {
+            if ([string]$injection.CommandFeedback -match '(?i)Listening for target value|Continue with the number') {
+                Clear-QaPendingValuePrompt `
+                    -Language ([string]$Test.language) `
+                    -Reason ("precondition for " + [string]$Test.id)
+            }
+
+            Stop-And-WaitProcess -Process $wait.Process
+            Write-RunLog (
+                "{0}: FAST-FAIL precondition; skipped {1}s Oracle timeout: {2}" -f
+                    [string]$Test.id,
+                    $timeoutSeconds,
+                    $definitivePreconditionFailure) "WARN"
+
+            return [pscustomobject]@{
+                Passed = $false
+                Observed = ""
+                Message = "QA fast-fail: " + $definitivePreconditionFailure
                 Directory = $directory
             }
         }
@@ -1071,7 +1173,7 @@ namespace SimVoiceQa
 "@ -Language CSharp
 }
 
-Write-RunLog "SimVoice Copilot QA Phase 2.3.6 — HF36-R21-R2 QA9 Principal Spanish Gate"
+Write-RunLog "SimVoice Copilot QA Phase 2.3.7 — HF36-R24 QA11 Definitive Failure Fast-Fail"
 Write-RunLog ("Suite: {0}" -f $Suite)
 Write-RunLog ("Output: {0}" -f $OutputDirectory)
 
@@ -1335,6 +1437,7 @@ foreach ($test in $tests) {
         $synthesizerVoice = ""
         $injectionElapsedMs = 0
         $injectionError = ""
+        $definitiveNoExecution = $false
 
         $wait = Start-OracleWait -Directory $attemptDirectory -Variable ([string]$test.variable) -Expected $expected -Tolerance ([double]$test.tolerance) -TimeoutSeconds ([int]$test.timeoutSeconds)
         Start-Sleep -Milliseconds 500
@@ -1401,17 +1504,48 @@ foreach ($test in $tests) {
             $passed = $false
         }
         else {
-            $hardDeadline = (Get-Date).AddSeconds(([int]$test.timeoutSeconds + 20))
-            while (-not $wait.Process.HasExited -and (Get-Date) -lt $hardDeadline) {
-                Start-Sleep -Milliseconds 250
-                $wait.Process.Refresh()
-                if ($simVoiceProcess.HasExited) {
-                    Stop-And-WaitProcess -Process $wait.Process
-                    break
-                }
-            }
+            $definitiveFailureReason = Get-QaDefinitiveNoExecutionReason `
+                -InjectionSuccess $true `
+                -CommandFeedback $commandFeedback
 
-            if (-not $wait.Process.HasExited) {
+            if (-not [string]::IsNullOrWhiteSpace($definitiveFailureReason)) {
+                $definitiveNoExecution = $true
+
+                if ($commandFeedback -match '(?i)Listening for target value|Continue with the number') {
+                    Clear-QaPendingValuePrompt `
+                        -Language ([string]$test.language) `
+                        -Reason ("attempt " + $attempt + " of " + $testId)
+                }
+
+                Stop-And-WaitProcess -Process $wait.Process
+                try { $wait.Process.Dispose() } catch { }
+
+                $latency = [Math]::Round(((Get-Date) - $injectionStarted).TotalSeconds, 3)
+                $observed = [string]$beforeObserved
+                $message = "QA fast-fail: " + $definitiveFailureReason
+
+                Write-RunLog (
+                    "{0}: FAST-FAIL attempt={1}; skipped {2}s Oracle timeout; recognized='{3}' feedback='{4}'" -f
+                        $testId,
+                        $attempt,
+                        [int]$test.timeoutSeconds,
+                        $recognizedText,
+                        $commandFeedback) "WARN"
+
+                $passed = $false
+            }
+            else {
+                $hardDeadline = (Get-Date).AddSeconds(([int]$test.timeoutSeconds + 20))
+                while (-not $wait.Process.HasExited -and (Get-Date) -lt $hardDeadline) {
+                    Start-Sleep -Milliseconds 250
+                    $wait.Process.Refresh()
+                    if ($simVoiceProcess.HasExited) {
+                        Stop-And-WaitProcess -Process $wait.Process
+                        break
+                    }
+                }
+
+                if (-not $wait.Process.HasExited) {
                 Stop-And-WaitProcess -Process $wait.Process
                 try { $wait.Process.Dispose() } catch { }
                 $message = "Oracle wait subprocess exceeded its hard timeout."
@@ -1440,6 +1574,7 @@ foreach ($test in $tests) {
                     $message = "Oracle did not generate a valid assertion report."
                     $passed = $false
                 }
+            }
             }
         }
 
@@ -1470,7 +1605,14 @@ foreach ($test in $tests) {
                 }
 
                 Write-Host "Retrying automatically with a fresh Oracle snapshot..." -ForegroundColor Yellow
-                Start-Sleep -Seconds 2
+                if ($definitiveNoExecution) {
+                    if ($DefinitiveFailureRetryPauseMs -gt 0) {
+                        Start-Sleep -Milliseconds $DefinitiveFailureRetryPauseMs
+                    }
+                }
+                else {
+                    Start-Sleep -Seconds 2
+                }
             }
         }
     }
