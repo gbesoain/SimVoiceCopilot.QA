@@ -205,6 +205,33 @@ function Wait-InternalAudioBridge {
     throw ("Internal Audio QA bridge was not ready within {0} seconds. Last error: {1}. Confirm that the installed app title includes '[QA Internal Audio]'." -f $TimeoutSeconds, $lastError)
 }
 
+function Start-SimVoiceQaPackage {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$AppId
+    )
+
+    # HF36-R21-QA8:
+    # Activate the packaged app through the Windows ApplicationActivationManager.
+    # explorer.exe shell:AppsFolder is kept only as a fallback because Explorer can
+    # silently ignore an activation request while still returning success.
+    try {
+        [uint32]$activationPid = [SimVoiceQa.PackageActivation]::Activate($AppId)
+        Write-RunLog (
+            "MSIX activation via ApplicationActivationManager: AppID={0}, activation PID={1}" -f
+            $AppId, $activationPid)
+        return
+    }
+    catch {
+        Write-RunLog (
+            "ApplicationActivationManager failed for AppID={0}: {1}. Falling back to shell:AppsFolder." -f
+            $AppId, $_.Exception.Message) "WARN"
+    }
+
+    Start-Process "explorer.exe" ("shell:AppsFolder\{0}" -f $AppId)
+    Write-RunLog ("MSIX activation fallback submitted through Explorer: AppID={0}" -f $AppId)
+}
+
 function Restart-SimVoiceForQaMatrix {
     param(
         [string]$AppId,
@@ -230,7 +257,7 @@ function Restart-SimVoiceForQaMatrix {
         try { $process.Dispose() } catch { }
     }
 
-    Start-Process "explorer.exe" ("shell:AppsFolder\{0}" -f $AppId)
+    Start-SimVoiceQaPackage -AppId $AppId
     $restarted = Wait-SimVoiceProcess -TimeoutSeconds $TimeoutSeconds
     Write-RunLog ("QA recovery: SimVoice process ready PID={0}." -f $restarted.Id)
 
@@ -654,7 +681,27 @@ function Wait-SimVoiceProcess {
         Start-Sleep -Milliseconds 500
     } while ((Get-Date) -lt $deadline)
 
-    throw "The process '$ProcessName' did not expose a main window within $TimeoutSeconds seconds."
+    $lastProcesses = @(Get-Process -Name $ProcessName -ErrorAction SilentlyContinue)
+    if ($lastProcesses.Count -gt 0) {
+        $details = ($lastProcesses | ForEach-Object {
+            try {
+                $_.Refresh()
+                "PID={0}, HasExited={1}, MainWindowHandle=0x{2:X}" -f
+                    $_.Id, $_.HasExited, $_.MainWindowHandle.ToInt64()
+            }
+            catch {
+                "PID={0}, state=unreadable" -f $_.Id
+            }
+        }) -join "; "
+
+        throw (
+            "The process '{0}' existed but did not expose a main window within {1} seconds. {2}" -f
+            $ProcessName, $TimeoutSeconds, $details)
+    }
+
+    throw (
+        "The process '{0}' was not created within {1} seconds after the MSIX activation request." -f
+        $ProcessName, $TimeoutSeconds)
 }
 
 function Get-UiElementName {
@@ -913,6 +960,68 @@ if (-not (Test-Path -LiteralPath $catalogPath)) {
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 
+if (-not ("SimVoiceQa.PackageActivation" -as [type])) {
+    Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+
+namespace SimVoiceQa
+{
+    [Flags]
+    public enum ActivateOptions
+    {
+        None = 0x00000000,
+        DesignMode = 0x00000001,
+        NoErrorUI = 0x00000002,
+        NoSplashScreen = 0x00000004
+    }
+
+    [ComImport]
+    [Guid("2e941141-7f97-4756-ba1d-9decde894a3d")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    internal interface IApplicationActivationManager
+    {
+        [PreserveSig]
+        int ActivateApplication(
+            [MarshalAs(UnmanagedType.LPWStr)] string appUserModelId,
+            [MarshalAs(UnmanagedType.LPWStr)] string arguments,
+            ActivateOptions options,
+            out uint processId);
+    }
+
+    [ComImport]
+    [Guid("45BA127D-10A8-46EA-8AB7-56EA9078943C")]
+    internal class ApplicationActivationManager
+    {
+    }
+
+    public static class PackageActivation
+    {
+        public static uint Activate(string appUserModelId)
+        {
+            if (String.IsNullOrWhiteSpace(appUserModelId))
+                throw new ArgumentException("AppUserModelId is empty.", "appUserModelId");
+
+            IApplicationActivationManager manager =
+                (IApplicationActivationManager)new ApplicationActivationManager();
+
+            uint processId;
+            int hr = manager.ActivateApplication(
+                appUserModelId,
+                null,
+                ActivateOptions.NoErrorUI,
+                out processId);
+
+            if (hr < 0)
+                Marshal.ThrowExceptionForHR(hr);
+
+            return processId;
+        }
+    }
+}
+"@
+}
+
 if (-not ("SimVoiceQa.NativeWindowTextReader" -as [type])) {
     Add-Type -TypeDefinition @"
 using System;
@@ -962,7 +1071,7 @@ namespace SimVoiceQa
 "@ -Language CSharp
 }
 
-Write-RunLog "SimVoice Copilot QA Phase 2.3.4 — HF36-R17 QA4 Resilient Internal Audio Matrix Runner"
+Write-RunLog "SimVoice Copilot QA Phase 2.3.5 — HF36-R21 QA8 Deterministic MSIX Activation"
 Write-RunLog ("Suite: {0}" -f $Suite)
 Write-RunLog ("Output: {0}" -f $OutputDirectory)
 
@@ -1004,7 +1113,7 @@ Write-RunLog ("Installed MSIX: {0} [{1}]" -f $app.Name, $app.AppID)
 $simVoiceProcess = Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($null -eq $simVoiceProcess -and -not $SkipAppLaunch) {
     Write-RunLog "Launching installed MSIX package."
-    Start-Process "explorer.exe" ("shell:AppsFolder\{0}" -f $app.AppID)
+    Start-SimVoiceQaPackage -AppId ([string]$app.AppID)
 }
 
 $simVoiceProcess = Wait-SimVoiceProcess -TimeoutSeconds $ConnectionTimeoutSeconds
