@@ -13,18 +13,19 @@ $ExpectedWrapperSha = "5f28f1f0fa4ec132268dadf87438daa7a418e64e8f17d354668ce64ee
 $ExpectedTotalCases = 191
 
 $Suites = @(
-    [pscustomobject]@{ Name = "CoreInternalEN";                 Expected = 36; MaxAttempts = 2 },
-    [pscustomobject]@{ Name = "NoConnectorInternalEN";         Expected = 30; MaxAttempts = 2 },
-    [pscustomobject]@{ Name = "RecognitionStressInternalEN";   Expected = 5;  MaxAttempts = 2 },
-    [pscustomobject]@{ Name = "ExtendedRadioInternalEN";       Expected = 12; MaxAttempts = 2 },
-    [pscustomobject]@{ Name = "SyntaxVariantsInternalEN";      Expected = 26; MaxAttempts = 2 },
-    [pscustomobject]@{ Name = "CoreInternalES";                 Expected = 50; MaxAttempts = 2 },
-    [pscustomobject]@{ Name = "RadioRecognitionStressInternalES"; Expected = 32; MaxAttempts = 1 }
+    [pscustomobject]@{ Name = "CoreInternalEN";                    Language = "en-US"; Expected = 36; MaxAttempts = 2 },
+    [pscustomobject]@{ Name = "NoConnectorInternalEN";            Language = "en-US"; Expected = 30; MaxAttempts = 2 },
+    [pscustomobject]@{ Name = "RecognitionStressInternalEN";      Language = "en-US"; Expected = 5;  MaxAttempts = 2 },
+    [pscustomobject]@{ Name = "ExtendedRadioInternalEN";          Language = "en-US"; Expected = 12; MaxAttempts = 2 },
+    [pscustomobject]@{ Name = "SyntaxVariantsInternalEN";         Language = "en-US"; Expected = 26; MaxAttempts = 2 },
+    [pscustomobject]@{ Name = "CoreInternalES";                    Language = "es-ES"; Expected = 50; MaxAttempts = 2 },
+    [pscustomobject]@{ Name = "RadioRecognitionStressInternalES"; Language = "es-ES"; Expected = 32; MaxAttempts = 1 }
 )
 
 $wrapperPath = Join-Path $QaRoot "Scripts\Run-QA-Flight-Automated.ps1"
 $runnerPath = Join-Path $QaRoot "Scripts\Run-QA-Flight-InternalAudio.ps1"
 $catalogPath = Join-Path $QaRoot "FlightFunctional\internal-audio-test-cases.json"
+$uiSettingsPath = Join-Path $env:LOCALAPPDATA "SimVoiceCopilot\ui_settings.json"
 $downloads = Join-Path $env:USERPROFILE "Downloads"
 
 $runStart = Get-Date
@@ -36,6 +37,12 @@ $finalZip = Join-Path $downloads ($matrixName + ".zip")
 $matrixLog = Join-Path $evidenceRoot "release-matrix.log"
 $matrixJson = Join-Path $evidenceRoot "release-matrix.json"
 $matrixTxt = Join-Path $evidenceRoot "release-matrix.txt"
+
+$script:originalSettingsExisted = $false
+$script:originalSettingsBytes = $null
+$script:settingsRestored = $false
+$script:infrastructureError = ""
+$script:results = @()
 
 function Get-Sha256 {
     param([string]$Path)
@@ -51,6 +58,89 @@ function Write-MatrixLog {
     $line = "{0}  {1}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"), $Message
     Add-Content -LiteralPath $matrixLog -Value $line -Encoding UTF8
     Write-Host $Message -ForegroundColor $Color
+}
+
+function Stop-SimVoiceProcess {
+    foreach ($proc in @(Get-Process -Name "SimVoiceCopilotApp" -ErrorAction SilentlyContinue)) {
+        try {
+            $proc.Refresh()
+            if (-not $proc.HasExited) {
+                Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+                [void]$proc.WaitForExit(5000)
+            }
+        }
+        catch { }
+        try { $proc.Dispose() } catch { }
+    }
+}
+
+function Save-OriginalUiSettings {
+    $script:originalSettingsExisted = Test-Path -LiteralPath $uiSettingsPath -PathType Leaf
+    if ($script:originalSettingsExisted) {
+        $script:originalSettingsBytes = [System.IO.File]::ReadAllBytes($uiSettingsPath)
+    }
+}
+
+function Set-MatrixVoiceLanguage {
+    param([string]$Language)
+
+    Stop-SimVoiceProcess
+
+    $settingsDir = Split-Path -Parent $uiSettingsPath
+    New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null
+
+    $settingsObject = $null
+    if (Test-Path -LiteralPath $uiSettingsPath -PathType Leaf) {
+        try {
+            $rawSettings = [System.IO.File]::ReadAllText($uiSettingsPath)
+            if (-not [string]::IsNullOrWhiteSpace($rawSettings)) {
+                $settingsObject = $rawSettings | ConvertFrom-Json
+            }
+        }
+        catch {
+            throw ("Cannot parse ui_settings.json before setting QA voice language: " + $_.Exception.Message)
+        }
+    }
+
+    if ($null -eq $settingsObject) {
+        $settingsObject = [pscustomobject]@{}
+    }
+
+    $voiceProperty = $settingsObject.PSObject.Properties["VoiceRecognitionLanguage"]
+    if ($null -eq $voiceProperty) {
+        $settingsObject | Add-Member -NotePropertyName "VoiceRecognitionLanguage" -NotePropertyValue $Language
+    }
+    else {
+        $voiceProperty.Value = $Language
+    }
+
+    $tempJson = $settingsObject | ConvertTo-Json -Depth 30
+    [System.IO.File]::WriteAllText(
+        $uiSettingsPath,
+        $tempJson,
+        [System.Text.UTF8Encoding]::new($false))
+
+    Write-MatrixLog (
+        "[QA14-R2] VoiceRecognitionLanguage temporarily set to {0}; ApplicationLanguage/user settings otherwise preserved." -f
+        $Language) "Yellow"
+}
+
+function Restore-OriginalUiSettings {
+    Stop-SimVoiceProcess
+
+    if ($script:settingsRestored) {
+        return
+    }
+
+    if ($script:originalSettingsExisted) {
+        [System.IO.File]::WriteAllBytes($uiSettingsPath, $script:originalSettingsBytes)
+    }
+    else {
+        Remove-Item -LiteralPath $uiSettingsPath -Force -ErrorAction SilentlyContinue
+    }
+
+    $script:settingsRestored = $true
+    Write-MatrixLog "[PASS] original ui_settings.json restored byte-for-byte." "Green"
 }
 
 function Get-NewestSuiteZip {
@@ -73,6 +163,21 @@ function Get-NewestSuiteZip {
     return $zipMatches[0]
 }
 
+function Find-ZipEntry {
+    param(
+        [System.IO.Compression.ZipArchive]$Archive,
+        [string]$EntrySuffix
+    )
+
+    return $Archive.Entries |
+        Where-Object {
+            $_.FullName.Replace("\","/").EndsWith(
+                $EntrySuffix,
+                [System.StringComparison]::OrdinalIgnoreCase)
+        } |
+        Select-Object -First 1
+}
+
 function Read-ZipJsonEntry {
     param(
         [string]$ZipPath,
@@ -83,10 +188,7 @@ function Read-ZipJsonEntry {
 
     $archive = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
     try {
-        $entry = $archive.Entries |
-            Where-Object { $_.FullName.Replace("\","/").EndsWith($EntrySuffix,[System.StringComparison]::OrdinalIgnoreCase) } |
-            Select-Object -First 1
-
+        $entry = Find-ZipEntry -Archive $archive -EntrySuffix $EntrySuffix
         if ($null -eq $entry) {
             throw ("ZIP entry not found: " + $EntrySuffix)
         }
@@ -95,7 +197,7 @@ function Read-ZipJsonEntry {
         try {
             $reader = New-Object System.IO.StreamReader($stream,[System.Text.Encoding]::UTF8,$true)
             try {
-                $jsonText = $reader.ReadToEnd()
+                return ($reader.ReadToEnd() | ConvertFrom-Json)
             }
             finally {
                 $reader.Dispose()
@@ -104,15 +206,13 @@ function Read-ZipJsonEntry {
         finally {
             $stream.Dispose()
         }
-
-        return ($jsonText | ConvertFrom-Json)
     }
     finally {
         $archive.Dispose()
     }
 }
 
-function Copy-ZipEvidenceEntry {
+function Try-Copy-ZipEvidenceEntry {
     param(
         [string]$ZipPath,
         [string]$EntrySuffix,
@@ -123,34 +223,31 @@ function Copy-ZipEvidenceEntry {
 
     $archive = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
     try {
-        $entry = $archive.Entries |
-            Where-Object { $_.FullName.Replace("\","/").EndsWith($EntrySuffix,[System.StringComparison]::OrdinalIgnoreCase) } |
-            Select-Object -First 1
-
+        $entry = Find-ZipEntry -Archive $archive -EntrySuffix $EntrySuffix
         if ($null -eq $entry) {
-            throw ("ZIP evidence entry not found: " + $EntrySuffix)
+            return $false
         }
 
-        $destDir = Split-Path -Parent $Destination
-        New-Item -ItemType Directory -Path $destDir -Force | Out-Null
-
-        $src = $entry.Open()
+        New-Item -ItemType Directory -Path (Split-Path -Parent $Destination) -Force | Out-Null
+        $srcStream = $entry.Open()
         try {
-            $dst = [System.IO.File]::Open(
+            $dstStream = [System.IO.File]::Open(
                 $Destination,
                 [System.IO.FileMode]::Create,
                 [System.IO.FileAccess]::Write,
                 [System.IO.FileShare]::None)
             try {
-                $src.CopyTo($dst)
+                $srcStream.CopyTo($dstStream)
             }
             finally {
-                $dst.Dispose()
+                $dstStream.Dispose()
             }
         }
         finally {
-            $src.Dispose()
+            $srcStream.Dispose()
         }
+
+        return $true
     }
     finally {
         $archive.Dispose()
@@ -159,22 +256,21 @@ function Copy-ZipEvidenceEntry {
 
 New-Item -ItemType Directory -Path $downloads -Force | Out-Null
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
-"SimVoice Copilot 1.0.20.0 Release Candidate Matrix" |
+"SimVoice Copilot 1.0.20.0 Release Candidate Matrix QA14-R2" |
     Set-Content -LiteralPath $matrixLog -Encoding UTF8
 
 $matrixExitCode = 1
-$results = @()
 
 try {
-    Write-MatrixLog "SimVoice Copilot 1.0.20.0 — FINAL AUTOMATED RELEASE MATRIX" "Cyan"
-    Write-MatrixLog "Product baseline expected: HF36-R29" "White"
-    Write-MatrixLog ("Suites: {0}" -f (($Suites | ForEach-Object { $_.Name }) -join ", ")) "White"
+    Write-MatrixLog "SimVoice Copilot 1.0.20.0 — FINAL AUTOMATED RELEASE MATRIX QA14-R2" "Cyan"
+    Write-MatrixLog "Product baseline expected: HF36-R30" "White"
+    Write-MatrixLog "Matrix is bilingual/self-contained: it temporarily switches VoiceRecognitionLanguage EN -> ES." "White"
     Write-MatrixLog ("Expected total cases: {0}" -f $ExpectedTotalCases) "White"
     Write-MatrixLog ""
 
-    foreach ($required in @($wrapperPath,$runnerPath,$catalogPath)) {
-        if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
-            throw ("Required QA file missing: " + $required)
+    foreach ($requiredPath in @($wrapperPath,$runnerPath,$catalogPath)) {
+        if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
+            throw ("Required QA file missing: " + $requiredPath)
         }
     }
 
@@ -190,10 +286,9 @@ try {
 
     Write-MatrixLog "[PASS] exact QA catalog / QA13-R1 runner / wrapper guards." "Green"
 
-    $catalog = Get-Content -LiteralPath $catalogPath -Raw -Encoding UTF8 | ConvertFrom-Json
-
+    $catalogObject = Get-Content -LiteralPath $catalogPath -Raw -Encoding UTF8 | ConvertFrom-Json
     foreach ($spec in $Suites) {
-        $suiteCases = @($catalog.suites.($spec.Name))
+        $suiteCases = @($catalogObject.suites.($spec.Name))
         if ($suiteCases.Count -ne [int]$spec.Expected) {
             throw (
                 "Suite catalog count mismatch for " + $spec.Name +
@@ -202,23 +297,21 @@ try {
         }
     }
 
-    $catalogTotal = ($Suites | ForEach-Object { [int]$_.Expected } | Measure-Object -Sum).Sum
-    if ([int]$catalogTotal -ne $ExpectedTotalCases) {
-        throw ("Release matrix total mismatch: " + $catalogTotal)
-    }
-
     Write-MatrixLog "[PASS] matrix catalog counts validated: 191 cases." "Green"
+
+    Save-OriginalUiSettings
 
     foreach ($spec in $Suites) {
         Write-MatrixLog ""
-        Write-MatrixLog ("============================================================") "DarkCyan"
+        Write-MatrixLog "============================================================" "DarkCyan"
         Write-MatrixLog (
-            "RUN SUITE: {0} | expected={1} | MaxAttempts={2}" -f
-            $spec.Name, $spec.Expected, $spec.MaxAttempts) "Cyan"
-        Write-MatrixLog ("============================================================") "DarkCyan"
+            "RUN SUITE: {0} | language={1} | expected={2} | MaxAttempts={3}" -f
+            $spec.Name,$spec.Language,$spec.Expected,$spec.MaxAttempts) "Cyan"
+        Write-MatrixLog "============================================================" "DarkCyan"
+
+        Set-MatrixVoiceLanguage -Language ([string]$spec.Language)
 
         $suiteStart = Get-Date
-
         [string[]]$childArgs = @(
             "-NoProfile",
             "-ExecutionPolicy", "Bypass",
@@ -239,6 +332,7 @@ try {
 
         $record = [ordered]@{
             Suite = [string]$spec.Name
+            Language = [string]$spec.Language
             ExpectedCases = [int]$spec.Expected
             RequiredMaxAttempts = [int]$spec.MaxAttempts
             ChildExitCode = [int]$childCode
@@ -257,107 +351,125 @@ try {
         if ($null -eq $suiteZip) {
             $record.EvidenceError = "Suite ZIP not found in Downloads."
             Write-MatrixLog ("[FAIL] " + $spec.Name + ": result ZIP not found.") "Red"
-            $results += [pscustomobject]$record
+            $script:results += [pscustomobject]$record
             continue
         }
 
         $record.ZipPath = $suiteZip.FullName
         $record.ZipSha256 = Get-Sha256 $suiteZip.FullName
+        $suiteEvidenceDir = Join-Path $evidenceRoot ("suite-" + $spec.Name)
+
+        # Always preserve whatever evidence exists, even if functional-results.json
+        # is absent because the child failed before executing test cases.
+        [void](Try-Copy-ZipEvidenceEntry -ZipPath $suiteZip.FullName -EntrySuffix "qa-automated-wrapper.json" -Destination (Join-Path $suiteEvidenceDir "qa-automated-wrapper.json"))
+        [void](Try-Copy-ZipEvidenceEntry -ZipPath $suiteZip.FullName -EntrySuffix "internal-audio-run.log" -Destination (Join-Path $suiteEvidenceDir "internal-audio-run.log"))
+        [void](Try-Copy-ZipEvidenceEntry -ZipPath $suiteZip.FullName -EntrySuffix "functional-results.json" -Destination (Join-Path $suiteEvidenceDir "functional-results.json"))
 
         try {
-            $functional = Read-ZipJsonEntry `
-                -ZipPath $suiteZip.FullName `
-                -EntrySuffix "functional-results.json"
+            $wrapperResult = Read-ZipJsonEntry -ZipPath $suiteZip.FullName -EntrySuffix "qa-automated-wrapper.json"
+            $record.ProfileRestored = [bool]$wrapperResult.ProfileRestored
+            $record.RunError = [string]$wrapperResult.RunError
+        }
+        catch {
+            $record.EvidenceError = "Wrapper evidence: " + $_.Exception.Message
+        }
 
-            $wrapper = Read-ZipJsonEntry `
-                -ZipPath $suiteZip.FullName `
-                -EntrySuffix "qa-automated-wrapper.json"
+        try {
+            $functional = Read-ZipJsonEntry -ZipPath $suiteZip.FullName -EntrySuffix "functional-results.json"
 
             $record.Passed = [int]$functional.Passed
             $record.Failed = [int]$functional.Failed
             $record.Success = [bool]$functional.Success
-            $record.ProfileRestored = [bool]$wrapper.ProfileRestored
-            $record.RunError = [string]$wrapper.RunError
 
             $attemptDist = [ordered]@{}
-            foreach ($group in @($functional.Results | Group-Object Attempts)) {
-                $attemptDist[[string]$group.Name] = [int]$group.Count
+            foreach ($attemptGroup in @($functional.Results | Group-Object Attempts)) {
+                $attemptDist[[string]$attemptGroup.Name] = [int]$attemptGroup.Count
             }
             $record.AttemptsDistribution = $attemptDist
 
             $rateDist = [ordered]@{}
-            foreach ($group in @($functional.Results | Group-Object SpeechRate)) {
-                $rateDist[[string]$group.Name] = [int]$group.Count
+            foreach ($rateGroup in @($functional.Results | Group-Object SpeechRate)) {
+                $rateDist[[string]$rateGroup.Name] = [int]$rateGroup.Count
             }
             $record.SpeechRateDistribution = $rateDist
 
-            $suiteEvidenceDir = Join-Path $evidenceRoot ("suite-" + $spec.Name)
-            Copy-ZipEvidenceEntry `
-                -ZipPath $suiteZip.FullName `
-                -EntrySuffix "functional-results.json" `
-                -Destination (Join-Path $suiteEvidenceDir "functional-results.json")
-            Copy-ZipEvidenceEntry `
-                -ZipPath $suiteZip.FullName `
-                -EntrySuffix "qa-automated-wrapper.json" `
-                -Destination (Join-Path $suiteEvidenceDir "qa-automated-wrapper.json")
-            Copy-ZipEvidenceEntry `
-                -ZipPath $suiteZip.FullName `
-                -EntrySuffix "internal-audio-run.log" `
-                -Destination (Join-Path $suiteEvidenceDir "internal-audio-run.log")
-
-            $strictStressOk = $true
             if ($spec.Name -eq "RadioRecognitionStressInternalES") {
-                $badAttempts = @($functional.Results | Where-Object { [int]$_.Attempts -ne 1 })
-                if ($badAttempts.Count -gt 0) {
-                    $strictStressOk = $false
+                $badAttemptResults = @($functional.Results | Where-Object { [int]$_.Attempts -ne 1 })
+                if ($badAttemptResults.Count -gt 0) {
                     $record.EvidenceError = (
-                        "Strict stress suite contained " +
-                        $badAttempts.Count +
+                        "Strict Spanish radio stress contained " +
+                        $badAttemptResults.Count +
                         " result(s) with Attempts != 1.")
                 }
             }
-
-            $suitePass =
-                ($childCode -eq 0) -and
-                $record.Success -and
-                ($record.Passed -eq [int]$spec.Expected) -and
-                ($record.Failed -eq 0) -and
-                $record.ProfileRestored -and
-                [string]::IsNullOrWhiteSpace($record.RunError) -and
-                $strictStressOk
-
-            if ($suitePass) {
-                Write-MatrixLog (
-                    "[PASS] {0}: {1}/{1}; profile restored; ZIP SHA={2}" -f
-                    $spec.Name, $spec.Expected, $record.ZipSha256) "Green"
-            }
-            else {
-                Write-MatrixLog (
-                    "[FAIL] {0}: child={1}, pass={2}, fail={3}, success={4}, profileRestored={5}, error={6}" -f
-                    $spec.Name,
-                    $childCode,
-                    $record.Passed,
-                    $record.Failed,
-                    $record.Success,
-                    $record.ProfileRestored,
-                    $record.EvidenceError) "Red"
-            }
         }
         catch {
-            $record.EvidenceError = $_.Exception.Message
+            if ([string]::IsNullOrWhiteSpace($record.EvidenceError)) {
+                $record.EvidenceError = "Functional evidence: " + $_.Exception.Message
+            }
+            else {
+                $record.EvidenceError += " | Functional evidence: " + $_.Exception.Message
+            }
+        }
+
+        $suitePass =
+            ($childCode -eq 0) -and
+            $record.Success -and
+            ($record.Passed -eq [int]$spec.Expected) -and
+            ($record.Failed -eq 0) -and
+            $record.ProfileRestored -and
+            [string]::IsNullOrWhiteSpace($record.RunError) -and
+            [string]::IsNullOrWhiteSpace($record.EvidenceError)
+
+        if ($suitePass) {
             Write-MatrixLog (
-                "[FAIL] " + $spec.Name +
-                ": evidence parse failed: " +
+                "[PASS] {0}: {1}/{1}; language={2}; profile restored." -f
+                $spec.Name,$spec.Expected,$spec.Language) "Green"
+        }
+        else {
+            Write-MatrixLog (
+                "[FAIL] {0}: child={1}, pass={2}, fail={3}, success={4}, profileRestored={5}, runError='{6}', evidence='{7}'" -f
+                $spec.Name,
+                $childCode,
+                $record.Passed,
+                $record.Failed,
+                $record.Success,
+                $record.ProfileRestored,
+                $record.RunError,
                 $record.EvidenceError) "Red"
         }
 
-        $results += [pscustomobject]$record
+        $script:results += [pscustomobject]$record
+    }
+}
+catch {
+    $script:infrastructureError = $_.Exception.Message
+    Write-MatrixLog ("[FAIL] release matrix infrastructure: " + $script:infrastructureError) "Red"
+}
+finally {
+    try {
+        Restore-OriginalUiSettings
+    }
+    catch {
+        $script:settingsRestored = $false
+        $restoreMessage = $_.Exception.Message
+        if ([string]::IsNullOrWhiteSpace($script:infrastructureError)) {
+            $script:infrastructureError = "ui_settings.json restore failed: " + $restoreMessage
+        }
+        else {
+            $script:infrastructureError += " | ui_settings.json restore failed: " + $restoreMessage
+        }
+        Write-MatrixLog ("[FAIL] ui_settings.json restore: " + $restoreMessage) "Red"
     }
 
-    $passedCases = ($results | Measure-Object Passed -Sum).Sum
-    $failedCases = ($results | Measure-Object Failed -Sum).Sum
-    $suiteFailures = @(
-        $results |
+    $passedCases = ($script:results | Measure-Object Passed -Sum).Sum
+    $failedCases = ($script:results | Measure-Object Failed -Sum).Sum
+
+    if ($null -eq $passedCases) { $passedCases = 0 }
+    if ($null -eq $failedCases) { $failedCases = 0 }
+
+    $failedSuites = @(
+        $script:results |
         Where-Object {
             $_.ChildExitCode -ne 0 -or
             -not $_.Success -or
@@ -369,24 +481,30 @@ try {
         })
 
     $allPass =
-        ($suiteFailures.Count -eq 0) -and
+        [string]::IsNullOrWhiteSpace($script:infrastructureError) -and
+        $script:settingsRestored -and
+        ($script:results.Count -eq $Suites.Count) -and
+        ($failedSuites.Count -eq 0) -and
         ([int]$passedCases -eq $ExpectedTotalCases) -and
         ([int]$failedCases -eq 0)
 
     $matrixObject = [ordered]@{
-        SchemaVersion = 1
+        SchemaVersion = 2
         Version = "1.0.20.0"
-        ProductBaseline = "HF36-R29"
-        MatrixRevision = "QA14-R1"
+        ProductBaseline = "HF36-R30"
+        MatrixRevision = "QA14-R2"
         StartedAtLocal = $runStart.ToString("o")
         FinishedAtLocal = (Get-Date).ToString("o")
         ExpectedTotalCases = $ExpectedTotalCases
         PassedCases = [int]$passedCases
         FailedCases = [int]$failedCases
         SuiteCount = $Suites.Count
-        FailedSuiteCount = $suiteFailures.Count
+        ExecutedSuiteCount = $script:results.Count
+        FailedSuiteCount = $failedSuites.Count
+        OriginalUiSettingsRestored = [bool]$script:settingsRestored
+        InfrastructureError = [string]$script:infrastructureError
         Success = [bool]$allPass
-        Suites = @($results)
+        Suites = @($script:results)
     }
 
     $matrixObject |
@@ -395,37 +513,40 @@ try {
 
     [string[]]$textLines = @(
         "SimVoice Copilot 1.0.20.0 — FINAL AUTOMATED RELEASE MATRIX",
-        ("Product baseline : HF36-R29"),
-        ("Matrix revision  : QA14-R1"),
+        "Product baseline : HF36-R30",
+        "Matrix revision  : QA14-R2",
         ("Started          : " + $matrixObject.StartedAtLocal),
         ("Finished         : " + $matrixObject.FinishedAtLocal),
-        ("Suites           : " + $matrixObject.SuiteCount),
+        ("Suites           : {0}/{1}" -f $matrixObject.ExecutedSuiteCount,$matrixObject.SuiteCount),
         ("Cases            : {0}/{1} PASS" -f $matrixObject.PassedCases,$matrixObject.ExpectedTotalCases),
         ("Failed cases     : " + $matrixObject.FailedCases),
         ("Failed suites    : " + $matrixObject.FailedSuiteCount),
+        ("UI settings restored: " + $matrixObject.OriginalUiSettingsRestored),
+        ("Infrastructure error: " + $matrixObject.InfrastructureError),
         ("SUCCESS          : " + $matrixObject.Success),
         "",
         "Per-suite:"
     )
 
-    foreach ($r in $results) {
+    foreach ($resultItem in $script:results) {
         $textLines += (
-            "{0,-36} {1,3}/{2,3}  FAIL={3}  Exit={4}  ProfileRestored={5}" -f
-            $r.Suite,
-            $r.Passed,
-            $r.ExpectedCases,
-            $r.Failed,
-            $r.ChildExitCode,
-            $r.ProfileRestored)
+            "{0,-36} {1,3}/{2,3}  FAIL={3}  Exit={4}  Lang={5}  ProfileRestored={6}" -f
+            $resultItem.Suite,
+            $resultItem.Passed,
+            $resultItem.ExpectedCases,
+            $resultItem.Failed,
+            $resultItem.ChildExitCode,
+            $resultItem.Language,
+            $resultItem.ProfileRestored)
     }
 
-    $textLines |
-        Set-Content -LiteralPath $matrixTxt -Encoding UTF8
+    $textLines | Set-Content -LiteralPath $matrixTxt -Encoding UTF8
 
     Write-MatrixLog ""
     if ($allPass) {
         Write-MatrixLog "============================================================" "Green"
         Write-MatrixLog "[PASS] FINAL RELEASE MATRIX: 191 / 191" "Green"
+        Write-MatrixLog "[PASS] Original ui_settings.json restored." "Green"
         Write-MatrixLog "============================================================" "Green"
         $matrixExitCode = 0
     }
@@ -433,38 +554,11 @@ try {
         Write-MatrixLog "============================================================" "Red"
         Write-MatrixLog (
             "[FAIL] FINAL RELEASE MATRIX: {0}/{1}, failed suites={2}" -f
-            $passedCases,$ExpectedTotalCases,$suiteFailures.Count) "Red"
+            $passedCases,$ExpectedTotalCases,$failedSuites.Count) "Red"
         Write-MatrixLog "============================================================" "Red"
         $matrixExitCode = 1
     }
-}
-catch {
-    Write-MatrixLog ("[FAIL] release matrix infrastructure: " + $_.Exception.Message) "Red"
 
-    $failureObject = [ordered]@{
-        SchemaVersion = 1
-        Version = "1.0.20.0"
-        ProductBaseline = "HF36-R29"
-        MatrixRevision = "QA14-R1"
-        StartedAtLocal = $runStart.ToString("o")
-        FinishedAtLocal = (Get-Date).ToString("o")
-        ExpectedTotalCases = $ExpectedTotalCases
-        PassedCases = 0
-        FailedCases = 0
-        SuiteCount = $Suites.Count
-        FailedSuiteCount = $Suites.Count
-        Success = $false
-        InfrastructureError = $_.Exception.Message
-        Suites = @($results)
-    }
-
-    $failureObject |
-        ConvertTo-Json -Depth 20 |
-        Set-Content -LiteralPath $matrixJson -Encoding UTF8
-
-    $matrixExitCode = 1
-}
-finally {
     try {
         if (Test-Path -LiteralPath $finalZip) {
             Remove-Item -LiteralPath $finalZip -Force -ErrorAction Stop
@@ -493,7 +587,7 @@ finally {
 Write-Host ""
 if ($matrixExitCode -eq 0) {
     Write-Host "FINAL AUTOMATED RELEASE GATE: PASS" -ForegroundColor Green
-    Write-Host "1.0.20.0 is eligible for the final manual smoke / RC2 promotion step." -ForegroundColor Yellow
+    Write-Host "1.0.20.0 is eligible for final manual smoke / RC2 promotion." -ForegroundColor Yellow
 }
 else {
     Write-Host "FINAL AUTOMATED RELEASE GATE: FAIL" -ForegroundColor Red
