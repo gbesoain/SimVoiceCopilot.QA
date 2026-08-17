@@ -1,6 +1,7 @@
 ﻿[CmdletBinding()]
 param(
-    [ValidateSet("SmokeInternalEN", "CoreInternalEN", "NoConnectorInternalEN", "ExtendedRadioInternalEN", "RecognitionStressInternalEN", "SyntaxVariantsInternalEN", "SmokeInternalES", "CoreInternalES")]
+    [ValidateSet("SmokeInternalEN", "CoreInternalEN", "NoConnectorInternalEN", "ExtendedRadioInternalEN", "RecognitionStressInternalEN", "SyntaxVariantsInternalEN", "SmokeInternalES", "CoreInternalES",
+        "RadioRecognitionStressInternalES")]
     [string]$Suite = "SmokeInternalEN",
 
     [ValidateSet("Heading", "Altitude", "Airspeed", "VerticalSpeed", "Radio", "Transponder")]
