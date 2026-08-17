@@ -23,7 +23,8 @@ $runnerPath = Join-Path $PSScriptRoot "Run-QA-Flight-InternalAudio.ps1"
 $catalogPath = Join-Path $projectRoot "FlightFunctional\internal-audio-test-cases.json"
 $runStamp = (Get-Date).ToString("yyyyMMdd-HHmmss")
 $outputDirectory = Join-Path $projectRoot ("QA-Runs\FlightInternalAudio\INTERNAL-{0}-{1}" -f $runStamp, $Suite)
-$zipPath = $outputDirectory + ".zip"
+$downloadsDirectory = Join-Path $env:USERPROFILE "Downloads"
+$zipPath = Join-Path $downloadsDirectory ("INTERNAL-{0}-{1}.zip" -f $runStamp, $Suite)
 
 function Write-QaHost {
     param(
@@ -346,15 +347,60 @@ finally {
         -RunError $runError
 
     try {
-        if (Test-Path -LiteralPath $zipPath) {
-            Remove-Item -LiteralPath $zipPath -Force
+        New-Item -ItemType Directory -Path $downloadsDirectory -Force | Out-Null
+
+        $zipStagingRoot = Join-Path $env:TEMP (
+            "SimVoice-QA-Zip-{0}-{1}" -f $runStamp, [guid]::NewGuid().ToString("N"))
+        $zipStagingDirectory = Join-Path $zipStagingRoot (
+            "INTERNAL-{0}-{1}" -f $runStamp, $Suite)
+
+        try {
+            New-Item -ItemType Directory -Path $zipStagingDirectory -Force | Out-Null
+
+            # Do not archive live Oracle files. First copy the completed run to an
+            # isolated staging directory. Robocopy retries transient file locks.
+            & robocopy.exe `
+                $outputDirectory `
+                $zipStagingDirectory `
+                /E `
+                /R:15 `
+                /W:1 `
+                /NFL `
+                /NDL `
+                /NJH `
+                /NJS `
+                /NP | Out-Null
+
+            $robocopyCode = $LASTEXITCODE
+            if ($robocopyCode -ge 8) {
+                throw (
+                    "QA result staging copy failed. Robocopy exit code: {0}" -f
+                    $robocopyCode)
+            }
+
+            if (Test-Path -LiteralPath $zipPath) {
+                Remove-Item -LiteralPath $zipPath -Force -ErrorAction Stop
+            }
+
+            # Staging has no Oracle/SimVoice process handles, so compression is deterministic.
+            Compress-Archive `
+                -LiteralPath $zipStagingDirectory `
+                -DestinationPath $zipPath `
+                -CompressionLevel Optimal `
+                -Force `
+                -ErrorAction Stop
+
+            if (-not (Test-Path -LiteralPath $zipPath -PathType Leaf)) {
+                throw "ZIP creation completed without producing the Downloads artifact."
+            }
+        }
+        finally {
+            if (Test-Path -LiteralPath $zipStagingRoot) {
+                Remove-Item -LiteralPath $zipStagingRoot -Recurse -Force -ErrorAction SilentlyContinue
+            }
         }
 
-        # Compress the complete INTERNAL result directory, including the temporary
-        # profile snapshot and wrapper manifest, so the artifact is immediately
-        # uploadable without manual collection.
-        Compress-Archive -LiteralPath $outputDirectory -DestinationPath $zipPath -CompressionLevel Optimal -Force
-        Write-QaHost ("[PASS] QA result ZIP ready: {0}" -f $zipPath) "Green"
+        Write-QaHost ("[PASS] QA result ZIP ready in Downloads: {0}" -f $zipPath) "Green"
     }
     catch {
         $zipError = $_.Exception.Message
@@ -376,7 +422,7 @@ if ($childExitCode -eq 0 -and [string]::IsNullOrWhiteSpace($runError)) {
 else {
     Write-QaHost "AUTOMATED QA RESULT: FAIL" "Red"
 }
-Write-QaHost ("ZIP: {0}" -f $zipPath) "Yellow"
+Write-QaHost ("ZIP (Downloads): {0}" -f $zipPath) "Yellow"
 Write-QaHost "Your original active voice-command profile has been restored." "Gray"
 
 exit $childExitCode
