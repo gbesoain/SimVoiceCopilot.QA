@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "description": "Unattended internal-audio end-to-end tests. SimVoice synthesizes PCM in memory, feeds the normal Vosk pipeline, and the independent SimConnect Oracle validates the real MSFS result. Schema v3 adds deterministic requiredTarget/precondition cases and independent COM1/COM2/NAV1/NAV2 frequency assertions. HF36-R17 QA2 adds NoConnectorInternalEN: 30 deterministic English cases mirroring Heading/Altitude/VerticalSpeed/Transponder Core coverage with the optional connector 'to' omitted. HF36-R20 QA7 adds SyntaxVariantsInternalEN: 26 final English end-to-end syntax/alias/unit cases, including selected airspeed Oracle verification. HF36-R21-R2 QA9 expands CoreInternalES to a 50-case principal Spanish end-to-end gate covering Heading, Altitude, Airspeed, Vertical Speed, COM1/COM2 active/standby, NAV1/NAV2 active/standby, decimal/punto, optional value connectors/units, and Transponder. HF36-R23 QA10 corrects ES-NAV1-ACTIVE-POINT-108200 so NAV1 selector and the leading digit of 108.2 are both spoken explicitly.",
+  "description": "Unattended internal-audio end-to-end tests. SimVoice synthesizes PCM in memory, feeds the normal Vosk pipeline, and the independent SimConnect Oracle validates the real MSFS result. Schema v3 adds deterministic requiredTarget/precondition cases and independent COM1/COM2/NAV1/NAV2 frequency assertions. HF36-R17 QA2 adds NoConnectorInternalEN: 30 deterministic English cases mirroring Heading/Altitude/VerticalSpeed/Transponder Core coverage with the optional connector 'to' omitted. HF36-R20 QA7 adds SyntaxVariantsInternalEN: 26 final English end-to-end syntax/alias/unit cases, including selected airspeed Oracle verification. HF36-R21-R2 QA9 expands CoreInternalES to a 50-case principal Spanish end-to-end gate covering Heading, Altitude, Airspeed, Vertical Speed, COM1/COM2 active/standby, NAV1/NAV2 active/standby, decimal/punto, optional value connectors/units, and Transponder. HF36-R23 QA10 corrects ES-NAV1-ACTIVE-POINT-108200 so NAV1 selector and the leading digit of 108.2 are both spoken explicitly. HF36-R26 QA13 adds RadioRecognitionStressInternalES: 32 strict Spanish COM/NAV first-attempt stress cases, balanced across COM1/COM2/NAV1/NAV2 active/standby and speech rates 0/-2.",
   "suites": {
     "SmokeInternalEN": [
       {
@@ -3493,6 +3493,648 @@
         },
         "speechRates": [
           0,
+          -2
+        ]
+      }
+    ],
+    "RadioRecognitionStressInternalES": [
+      {
+        "id": "ES-RADIO-STRESS-COM1-A-01-R0",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com1Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer com uno uno uno ocho decimal seis",
+          "expected": "118.6"
+        },
+        "precondition": {
+          "phrase": "Establecer com uno uno dos uno decimal cinco",
+          "expected": "121.5"
+        },
+        "speechRates": [
+          0
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-COM1-A-02-R0",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com1Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Sintonizar com uno uno dos cuatro decimal ocho cinco",
+          "expected": "124.85"
+        },
+        "precondition": {
+          "phrase": "Establecer radio uno uno ocho decimal seis",
+          "expected": "118.6"
+        },
+        "speechRates": [
+          0
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-COM1-A-03-RM2",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com1Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer frecuencia com uno uno dos uno punto cinco",
+          "expected": "121.5"
+        },
+        "precondition": {
+          "phrase": "Establecer com uno uno dos cuatro decimal ocho cinco",
+          "expected": "124.85"
+        },
+        "speechRates": [
+          -2
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-COM1-A-04-RM2",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com1Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer radio uno dos siete punto ocho cinco",
+          "expected": "127.85"
+        },
+        "precondition": {
+          "phrase": "Establecer com uno uno dos uno decimal cinco",
+          "expected": "121.5"
+        },
+        "speechRates": [
+          -2
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-COM1-S-01-R0",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com1Standby",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer com uno espera uno dos uno decimal cinco",
+          "expected": "121.5"
+        },
+        "precondition": {
+          "phrase": "Establecer com uno espera uno dos siete decimal ocho cinco",
+          "expected": "127.85"
+        },
+        "speechRates": [
+          0
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-COM1-S-02-R0",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com1Standby",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Sintonizar com uno espera uno dos siete decimal ocho cinco",
+          "expected": "127.85"
+        },
+        "precondition": {
+          "phrase": "Establecer com uno espera uno dos uno decimal cinco",
+          "expected": "121.5"
+        },
+        "speechRates": [
+          0
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-COM1-S-03-RM2",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com1Standby",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer frecuencia com uno espera uno dos cuatro punto ocho cinco",
+          "expected": "124.85"
+        },
+        "precondition": {
+          "phrase": "Establecer com uno espera uno dos uno decimal cinco",
+          "expected": "121.5"
+        },
+        "speechRates": [
+          -2
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-COM1-S-04-RM2",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com1Standby",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer com uno espera uno dos ocho punto tres",
+          "expected": "128.3"
+        },
+        "precondition": {
+          "phrase": "Establecer com uno espera uno dos cuatro decimal ocho cinco",
+          "expected": "124.85"
+        },
+        "speechRates": [
+          -2
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-COM2-A-01-R0",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com2Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer com dos uno uno nueve decimal dos",
+          "expected": "119.2"
+        },
+        "precondition": {
+          "phrase": "Establecer com dos uno tres cuatro decimal siete",
+          "expected": "134.7"
+        },
+        "speechRates": [
+          0
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-COM2-A-02-R0",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com2Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Sintonizar com dos uno tres cuatro decimal siete",
+          "expected": "134.7"
+        },
+        "precondition": {
+          "phrase": "Establecer com dos uno uno nueve decimal dos",
+          "expected": "119.2"
+        },
+        "speechRates": [
+          0
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-COM2-A-03-RM2",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com2Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer frecuencia com dos uno dos ocho punto tres",
+          "expected": "128.3"
+        },
+        "precondition": {
+          "phrase": "Establecer com dos uno uno nueve decimal dos",
+          "expected": "119.2"
+        },
+        "speechRates": [
+          -2
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-COM2-A-04-RM2",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com2Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Sintonizar com dos uno dos uno punto cinco",
+          "expected": "121.5"
+        },
+        "precondition": {
+          "phrase": "Establecer com dos uno dos ocho decimal tres",
+          "expected": "128.3"
+        },
+        "speechRates": [
+          -2
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-COM2-S-01-R0",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com2Standby",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer com dos espera uno dos tres decimal cuatro cinco",
+          "expected": "123.45"
+        },
+        "precondition": {
+          "phrase": "Establecer com dos espera uno dos ocho decimal tres",
+          "expected": "128.3"
+        },
+        "speechRates": [
+          0
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-COM2-S-02-R0",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com2Standby",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Sintonizar com dos espera uno dos ocho decimal tres",
+          "expected": "128.3"
+        },
+        "precondition": {
+          "phrase": "Establecer com dos espera uno dos tres decimal cuatro cinco",
+          "expected": "123.45"
+        },
+        "speechRates": [
+          0
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-COM2-S-03-RM2",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com2Standby",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer frecuencia com dos espera uno uno nueve punto dos",
+          "expected": "119.2"
+        },
+        "precondition": {
+          "phrase": "Establecer com dos espera uno dos ocho decimal tres",
+          "expected": "128.3"
+        },
+        "speechRates": [
+          -2
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-COM2-S-04-RM2",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Com2Standby",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Sintonizar com dos espera uno tres cuatro punto siete",
+          "expected": "134.7"
+        },
+        "precondition": {
+          "phrase": "Establecer com dos espera uno uno nueve decimal dos",
+          "expected": "119.2"
+        },
+        "speechRates": [
+          -2
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-NAV1-A-01-R0",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav1Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer nav uno uno uno cero decimal cinco",
+          "expected": "110.5"
+        },
+        "precondition": {
+          "phrase": "Establecer nav uno uno uno tres decimal nueve",
+          "expected": "113.9"
+        },
+        "speechRates": [
+          0
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-NAV1-A-02-R0",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav1Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Sintonizar nav uno uno uno tres decimal nueve",
+          "expected": "113.9"
+        },
+        "precondition": {
+          "phrase": "Establecer nav uno uno uno cero decimal cinco",
+          "expected": "110.5"
+        },
+        "speechRates": [
+          0
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-NAV1-A-03-RM2",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav1Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer frecuencia nav uno uno cero ocho punto dos",
+          "expected": "108.2"
+        },
+        "precondition": {
+          "phrase": "Establecer nav uno uno uno cero decimal cinco",
+          "expected": "110.5"
+        },
+        "speechRates": [
+          -2
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-NAV1-A-04-RM2",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav1Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer nav uno uno uno cinco punto tres",
+          "expected": "115.3"
+        },
+        "precondition": {
+          "phrase": "Establecer frecuencia nav uno uno cero ocho decimal dos",
+          "expected": "108.2"
+        },
+        "speechRates": [
+          -2
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-NAV1-S-01-R0",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav1Standby",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer nav uno espera uno cero ocho decimal dos",
+          "expected": "108.2"
+        },
+        "precondition": {
+          "phrase": "Establecer nav uno espera uno uno uno decimal siete",
+          "expected": "111.7"
+        },
+        "speechRates": [
+          0
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-NAV1-S-02-R0",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav1Standby",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Sintonizar nav uno espera uno uno uno decimal siete",
+          "expected": "111.7"
+        },
+        "precondition": {
+          "phrase": "Establecer nav uno espera uno cero ocho decimal dos",
+          "expected": "108.2"
+        },
+        "speechRates": [
+          0
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-NAV1-S-03-RM2",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav1Standby",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer frecuencia nav uno espera uno uno tres punto nueve",
+          "expected": "113.9"
+        },
+        "precondition": {
+          "phrase": "Establecer nav uno espera uno cero ocho decimal dos",
+          "expected": "108.2"
+        },
+        "speechRates": [
+          -2
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-NAV1-S-04-RM2",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav1Standby",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Sintonizar nav uno espera uno uno siete punto nueve",
+          "expected": "117.9"
+        },
+        "precondition": {
+          "phrase": "Establecer nav uno espera uno uno tres decimal nueve",
+          "expected": "113.9"
+        },
+        "speechRates": [
+          -2
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-NAV2-A-01-R0",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav2Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer nav dos uno cero nueve decimal nueve",
+          "expected": "109.9"
+        },
+        "precondition": {
+          "phrase": "Establecer nav dos uno uno cinco decimal tres",
+          "expected": "115.3"
+        },
+        "speechRates": [
+          0
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-NAV2-A-02-R0",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav2Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Sintonizar nav dos uno uno cinco decimal tres",
+          "expected": "115.3"
+        },
+        "precondition": {
+          "phrase": "Establecer nav dos uno cero nueve decimal nueve",
+          "expected": "109.9"
+        },
+        "speechRates": [
+          0
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-NAV2-A-03-RM2",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav2Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer frecuencia nav dos uno uno dos punto tres",
+          "expected": "112.3"
+        },
+        "precondition": {
+          "phrase": "Establecer nav dos uno cero nueve decimal nueve",
+          "expected": "109.9"
+        },
+        "speechRates": [
+          -2
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-NAV2-A-04-RM2",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav2Active",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Sintonizar nav dos uno cero ocho punto dos",
+          "expected": "108.2"
+        },
+        "precondition": {
+          "phrase": "Establecer nav dos uno uno dos decimal tres",
+          "expected": "112.3"
+        },
+        "speechRates": [
+          -2
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-NAV2-S-01-R0",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav2Standby",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer nav dos espera uno uno dos decimal tres",
+          "expected": "112.3"
+        },
+        "precondition": {
+          "phrase": "Establecer nav dos espera uno uno siete decimal nueve",
+          "expected": "117.9"
+        },
+        "speechRates": [
+          0
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-NAV2-S-02-R0",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav2Standby",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Sintonizar nav dos espera uno uno siete decimal nueve",
+          "expected": "117.9"
+        },
+        "precondition": {
+          "phrase": "Establecer nav dos espera uno uno dos decimal tres",
+          "expected": "112.3"
+        },
+        "speechRates": [
+          0
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-NAV2-S-03-RM2",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav2Standby",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Establecer frecuencia nav dos espera uno uno cero punto cinco",
+          "expected": "110.5"
+        },
+        "precondition": {
+          "phrase": "Establecer nav dos espera uno uno dos decimal tres",
+          "expected": "112.3"
+        },
+        "speechRates": [
+          -2
+        ]
+      },
+      {
+        "id": "ES-RADIO-STRESS-NAV2-S-04-RM2",
+        "category": "Radio",
+        "type": "value",
+        "language": "es-ES",
+        "variable": "Nav2Standby",
+        "tolerance": 0.005,
+        "timeoutSeconds": 15,
+        "requiredTarget": {
+          "phrase": "Sintonizar nav dos espera uno uno tres punto nueve",
+          "expected": "113.9"
+        },
+        "precondition": {
+          "phrase": "Establecer nav dos espera uno uno cero decimal cinco",
+          "expected": "110.5"
+        },
+        "speechRates": [
           -2
         ]
       }

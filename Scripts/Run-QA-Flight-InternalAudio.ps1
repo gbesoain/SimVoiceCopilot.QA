@@ -1200,7 +1200,7 @@ namespace SimVoiceQa
 "@ -Language CSharp
 }
 
-Write-RunLog "SimVoice Copilot QA Phase 2.3.8 — HF36-R25 QA12 Fast-Fail Process-Tree Cleanup"
+Write-RunLog "SimVoice Copilot QA Phase 2.3.9 — HF36-R26 QA13 Spanish Radio Recognition Stress"
 Write-RunLog ("Suite: {0}" -f $Suite)
 Write-RunLog ("Output: {0}" -f $OutputDirectory)
 
@@ -1226,6 +1226,9 @@ if ($Suite -eq "NoConnectorInternalEN" -and $suiteCatalogCount -ne 30) {
 }
 if ($Suite -eq "SyntaxVariantsInternalEN" -and $suiteCatalogCount -ne 26) {
     throw "HF36-R20 QA7 SyntaxVariantsInternalEN gate must contain exactly 26 cases; catalog contains $suiteCatalogCount."
+}
+if ($Suite -eq "RadioRecognitionStressInternalES" -and $suiteCatalogCount -ne 32) {
+    throw "HF36-R26 QA13 RadioRecognitionStressInternalES gate must contain exactly 32 strict first-attempt cases; catalog contains $suiteCatalogCount."
 }
 
 if ($Category.Count -gt 0) {
