@@ -37,6 +37,22 @@ param(
     [ValidateRange(0, 3000)]
     [int]$DefinitiveFailureRetryPauseMs = 500,
 
+    # QA14-R3: when the app has already reported a direct SimConnect command as
+    # executed, direct state variables should settle almost immediately. Do not
+    # burn a 30-second Oracle timeout for an aircraft/event combination that is
+    # clearly not changing. Altitude and vertical-speed remain on their full
+    # timeout because aircraft-specific adapters can legitimately be asynchronous.
+    [ValidateRange(1000, 10000)]
+    [int]$DirectExecutionObservationGraceMs = 2500,
+
+    # QA14-R5: optional matrix-wide progress context. Standalone suite runs keep
+    # the historical local-only counter when GlobalCaseTotal=0.
+    [ValidateRange(0, 10000)]
+    [int]$GlobalCaseOffset = 0,
+
+    [ValidateRange(0, 10000)]
+    [int]$GlobalCaseTotal = 0,
+
     # HF36-R15: one-time QA-only settle after the internal bridge is ready. This
     # prevents the first synthesized command from landing on the product's normal
     # recognizer warm-up boundary; the product acceptance gate itself is unchanged.
@@ -211,7 +227,84 @@ function Get-QaDefinitiveNoExecutionReason {
         return "Parameterized command was incomplete and entered target-value prompt mode."
     }
 
+    # QA14-R5: Internal Audio is testing deterministic standard commands. If the
+    # utterance has already fallen through to AI fallback, deterministic command
+    # arbitration did not execute the expected simulator event. Do not burn the
+    # Oracle timeout waiting for an event that was never dispatched.
+    if ($feedback.StartsWith(
+            "AI fallback analyzing:",
+            [System.StringComparison]::OrdinalIgnoreCase))
+    {
+        return "Deterministic command arbitration rejected the utterance and entered AI fallback; no standard simulator command was executed."
+    }
+
     return ""
+}
+
+function Get-QaDirectExecutionObservationGraceMs {
+    param(
+        [string]$Variable,
+        [string]$CommandFeedback
+    )
+
+    if ($DirectExecutionObservationGraceMs -le 0) {
+        return 0
+    }
+
+    $feedback = if ($null -eq $CommandFeedback) { "" } else { $CommandFeedback.Trim() }
+    if (-not $feedback.StartsWith(
+            "Command executed:",
+            [System.StringComparison]::OrdinalIgnoreCase) -or
+        $feedback.IndexOf(
+            "SimConnect Event:",
+            [System.StringComparison]::OrdinalIgnoreCase) -lt 0)
+    {
+        return 0
+    }
+
+    # These are direct K/event writes in the existing certified command path.
+    # Their successful observations in the current matrix are normally ~1-2 s.
+    # Keep adapter-like altitude/VS operations on their original full timeout.
+    switch ($Variable) {
+        "HeadingBug"         { return $DirectExecutionObservationGraceMs }
+        "SelectedAirspeed"   { return $DirectExecutionObservationGraceMs }
+        "SelectedSpeed"      { return $DirectExecutionObservationGraceMs }
+        "Transponder"        { return $DirectExecutionObservationGraceMs }
+        "TransponderCode"    { return $DirectExecutionObservationGraceMs }
+        "Com1Active"         { return $DirectExecutionObservationGraceMs }
+        "Com1Standby"        { return $DirectExecutionObservationGraceMs }
+        "Com2Active"         { return $DirectExecutionObservationGraceMs }
+        "Com2Standby"        { return $DirectExecutionObservationGraceMs }
+        "Nav1Active"         { return $DirectExecutionObservationGraceMs }
+        "Nav1Standby"        { return $DirectExecutionObservationGraceMs }
+        "Nav2Active"         { return $DirectExecutionObservationGraceMs }
+        "Nav2Standby"        { return $DirectExecutionObservationGraceMs }
+        default              { return 0 }
+    }
+}
+
+function Wait-QaDirectExecutionObservation {
+    param(
+        [System.Diagnostics.Process]$OracleProcess,
+        [System.Diagnostics.Process]$SimVoiceProcess,
+        [int]$GraceMs
+    )
+
+    if ($GraceMs -le 0) {
+        return $false
+    }
+
+    $deadline = (Get-Date).AddMilliseconds($GraceMs)
+    while (-not $OracleProcess.HasExited -and (Get-Date) -lt $deadline) {
+        Start-Sleep -Milliseconds 125
+        $OracleProcess.Refresh()
+        try { $SimVoiceProcess.Refresh() } catch { }
+        if ($SimVoiceProcess.HasExited) {
+            return $false
+        }
+    }
+
+    return $OracleProcess.HasExited
 }
 
 function Clear-QaPendingValuePrompt {
@@ -680,6 +773,37 @@ function Invoke-InternalAudioPrecondition {
                 Observed = ""
                 Message = "QA fast-fail: " + $definitivePreconditionFailure
                 Directory = $directory
+            }
+        }
+
+        $directGraceMs = Get-QaDirectExecutionObservationGraceMs `
+            -Variable $variable `
+            -CommandFeedback ([string]$injection.CommandFeedback)
+
+        if ($directGraceMs -gt 0) {
+            $completedInsideGrace = Wait-QaDirectExecutionObservation `
+                -OracleProcess $wait.Process `
+                -SimVoiceProcess $simVoiceProcess `
+                -GraceMs $directGraceMs
+
+            if (-not $completedInsideGrace -and -not $simVoiceProcess.HasExited) {
+                Stop-And-WaitProcess -Process $wait.Process
+                Write-RunLog (
+                    "{0}: FAST-FAIL precondition; direct command reported executed but {1} did not reach {2} within {3} ms." -f
+                        [string]$Test.id,
+                        $variable,
+                        $expected,
+                        $directGraceMs) "WARN"
+
+                return [pscustomobject]@{
+                    Passed = $false
+                    Observed = ""
+                    Message = (
+                        "QA fast-fail: direct SimConnect command was reported executed, but " +
+                        $variable + " did not reach " + $expected +
+                        " within " + $directGraceMs + " ms.")
+                    Directory = $directory
+                }
             }
         }
 
@@ -1285,7 +1409,7 @@ Write-Host "  Microphone             : not used"
 Write-Host "  Audio source           : Windows speech synthesis -> 16 kHz PCM -> normal Vosk pipeline"
 Write-Host "  Simulator              : active flight; do not operate the tested controls manually"
 Write-Host ("  QA initial settle      : {0} ms once after bridge ready" -f $InitialRecognizerSettleMs)
-Write-Host ("  QA pacing              : wait for spoken feedback idle + {0} ms gap" -f $InterCommandPauseMs)
+Write-Host ("  QA pacing              : wait for spoken feedback idle + {0} ms gap; direct-event failure grace={1} ms" -f $InterCommandPauseMs,$DirectExecutionObservationGraceMs)
 Write-Host ""
 
 $results = New-Object 'System.Collections.Generic.List[object]' 
@@ -1323,7 +1447,19 @@ foreach ($test in $tests) {
     $beforeDirectory = Join-Path $testRoot "before"
 
     Write-Host ""
-    Write-Host ("[{0}/{1}] {2}" -f $testNumber, $tests.Count, $testId) -ForegroundColor Cyan
+    if ($GlobalCaseTotal -gt 0) {
+        $globalCaseNumber = $GlobalCaseOffset + $testNumber
+        Write-Host (
+            "[{0}/{1} | TOTAL {2}/{3}] {4}" -f
+            $testNumber,
+            $tests.Count,
+            $globalCaseNumber,
+            $GlobalCaseTotal,
+            $testId) -ForegroundColor Cyan
+    }
+    else {
+        Write-Host ("[{0}/{1}] {2}" -f $testNumber, $tests.Count, $testId) -ForegroundColor Cyan
+    }
 
     $beforeRun = Invoke-OracleSync -Mode "Snapshot" -Directory $beforeDirectory -TimeoutSeconds 20 -IntervalMs 500 -UseNoBuild
     $beforeReport = Read-OracleReport -Path $beforeRun.ReportPath
@@ -1364,16 +1500,43 @@ foreach ($test in $tests) {
                 continue
             }
 
-            $preconditionResult = Invoke-InternalAudioPrecondition -Test $test -Variant $precondition -TestRoot $testRoot
-            if (-not [bool]$preconditionResult.Passed) {
+            $preconditionResult = $null
+            for ($preconditionAttempt = 1; $preconditionAttempt -le $MaxAttempts; $preconditionAttempt++) {
+                $preconditionResult = Invoke-InternalAudioPrecondition `
+                    -Test $test `
+                    -Variant $precondition `
+                    -TestRoot $testRoot `
+                    -AttemptNumber $preconditionAttempt
+
+                if ([bool]$preconditionResult.Passed) {
+                    break
+                }
+
+                Write-RunLog (
+                    "{0}: deterministic precondition attempt {1}/{2} failed: {3}" -f
+                    $testId,
+                    $preconditionAttempt,
+                    $MaxAttempts,
+                    [string]$preconditionResult.Message) "WARN"
+
+                if ($preconditionAttempt -lt $MaxAttempts) {
+                    Wait-QaHumanPace -Reason ("before precondition retry for " + $testId)
+                }
+            }
+
+            if ($null -eq $preconditionResult -or -not [bool]$preconditionResult.Passed) {
                 $results.Add([pscustomobject][ordered]@{
                     TestId = $testId; Suite = $Suite; Language = [string]$test.language; Phrase = [string]$requiredTarget.phrase;
                     RecognizedText = ""; CommandFeedback = ""; SynthesizerVoice = ""; SpeechRate = 0; InjectionElapsedMs = 0;
                     Variable = [string]$test.variable; Before = [string]$beforeObserved; Expected = [string]$requiredTarget.expected; Observed = [string]$preconditionResult.Observed;
                     Tolerance = [double]$test.tolerance; Attempts = 0; LatencySeconds = 0; Passed = $false;
-                    Message = "Could not establish deterministic precondition: " + [string]$preconditionResult.Message; OracleDirectory = [string]$preconditionResult.Directory
+                    Message = "Could not establish deterministic precondition after " + $MaxAttempts + " attempt(s): " + [string]$preconditionResult.Message; OracleDirectory = [string]$preconditionResult.Directory
                 })
-                Write-RunLog ("{0}: FAIL - deterministic precondition failed: {1}" -f $testId, [string]$preconditionResult.Message) "ERROR"
+                Write-RunLog (
+                    "{0}: FAIL - deterministic precondition failed after {1} attempt(s): {2}" -f
+                    $testId,
+                    $MaxAttempts,
+                    [string]$preconditionResult.Message) "ERROR"
                 continue
             }
 
@@ -1469,6 +1632,7 @@ foreach ($test in $tests) {
         $injectionElapsedMs = 0
         $injectionError = ""
         $definitiveNoExecution = $false
+        $definitiveExecutionNoObservation = $false
 
         $wait = Start-OracleWait -Directory $attemptDirectory -Variable ([string]$test.variable) -Expected $expected -Tolerance ([double]$test.tolerance) -TimeoutSeconds ([int]$test.timeoutSeconds)
         Start-Sleep -Milliseconds 500
@@ -1566,6 +1730,42 @@ foreach ($test in $tests) {
                 $passed = $false
             }
             else {
+                $directGraceMs = Get-QaDirectExecutionObservationGraceMs `
+                    -Variable ([string]$test.variable) `
+                    -CommandFeedback $commandFeedback
+
+                if ($directGraceMs -gt 0) {
+                    $completedInsideGrace = Wait-QaDirectExecutionObservation `
+                        -OracleProcess $wait.Process `
+                        -SimVoiceProcess $simVoiceProcess `
+                        -GraceMs $directGraceMs
+
+                    if (-not $completedInsideGrace -and -not $simVoiceProcess.HasExited) {
+                        $definitiveExecutionNoObservation = $true
+                        Stop-And-WaitProcess -Process $wait.Process
+                        try { $wait.Process.Dispose() } catch { }
+
+                        $latency = [Math]::Round(((Get-Date) - $injectionStarted).TotalSeconds, 3)
+                        $observed = [string]$beforeObserved
+                        $message = (
+                            "QA fast-fail: direct SimConnect command was reported executed, but " +
+                            [string]$test.variable + " did not reach " + $expected +
+                            " within " + $directGraceMs + " ms.")
+
+                        Write-RunLog (
+                            "{0}: FAST-FAIL attempt={1}; direct execution not observed within {2} ms; skipped remaining {3}s Oracle timeout; recognized='{4}' feedback='{5}'" -f
+                                $testId,
+                                $attempt,
+                                $directGraceMs,
+                                [int]$test.timeoutSeconds,
+                                $recognizedText,
+                                $commandFeedback) "WARN"
+
+                        $passed = $false
+                    }
+                }
+
+                if (-not $definitiveExecutionNoObservation) {
                 $hardDeadline = (Get-Date).AddSeconds(([int]$test.timeoutSeconds + 20))
                 while (-not $wait.Process.HasExited -and (Get-Date) -lt $hardDeadline) {
                     Start-Sleep -Milliseconds 250
@@ -1606,8 +1806,9 @@ foreach ($test in $tests) {
                     $passed = $false
                 }
             }
+                }
             }
-        }
+            }
 
         if ($passed) {
             Write-Host ("PASS: observed {0} in {1} seconds" -f $observed, $latency) -ForegroundColor Green
@@ -1636,7 +1837,7 @@ foreach ($test in $tests) {
                 }
 
                 Write-Host "Retrying automatically with a fresh Oracle snapshot..." -ForegroundColor Yellow
-                if ($definitiveNoExecution) {
+                if ($definitiveNoExecution -or $definitiveExecutionNoObservation) {
                     if ($DefinitiveFailureRetryPauseMs -gt 0) {
                         Start-Sleep -Milliseconds $DefinitiveFailureRetryPauseMs
                     }

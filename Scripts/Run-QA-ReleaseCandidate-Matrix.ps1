@@ -8,8 +8,8 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $ExpectedCatalogSha = "00e8e9937822e09f24c5a72a4b4a89f5a6d1dd71ecf6d878cfabe44eef2fdafb"
-$ExpectedRunnerSha = "731fec166acafc17558ef5f423d69f6f37eb55d937923cb73b08fbcfbc779143"
-$ExpectedWrapperSha = "5f28f1f0fa4ec132268dadf87438daa7a418e64e8f17d354668ce64eeb0dfda1"
+$ExpectedRunnerSha = "7b3464df43c11d181beb8a7adc21febce568db0b6cca42ce0f725d7e7a4fdc6c"
+$ExpectedWrapperSha = "122d75b651fc2e7aeb58281eaa3520be7c554ec4228db9ff19366aafc92967b1"
 $ExpectedTotalCases = 191
 
 $Suites = @(
@@ -81,7 +81,7 @@ function Save-OriginalUiSettings {
     }
 }
 
-function Set-MatrixVoiceLanguage {
+function Set-MatrixSuiteLanguage {
     param([string]$Language)
 
     Stop-SimVoiceProcess
@@ -98,7 +98,7 @@ function Set-MatrixVoiceLanguage {
             }
         }
         catch {
-            throw ("Cannot parse ui_settings.json before setting QA voice language: " + $_.Exception.Message)
+            throw ("Cannot parse ui_settings.json before setting QA suite language: " + $_.Exception.Message)
         }
     }
 
@@ -106,12 +106,14 @@ function Set-MatrixVoiceLanguage {
         $settingsObject = [pscustomobject]@{}
     }
 
-    $voiceProperty = $settingsObject.PSObject.Properties["VoiceRecognitionLanguage"]
-    if ($null -eq $voiceProperty) {
-        $settingsObject | Add-Member -NotePropertyName "VoiceRecognitionLanguage" -NotePropertyValue $Language
-    }
-    else {
-        $voiceProperty.Value = $Language
+    foreach ($propertyName in @("ApplicationLanguage","VoiceRecognitionLanguage")) {
+        $property = $settingsObject.PSObject.Properties[$propertyName]
+        if ($null -eq $property) {
+            $settingsObject | Add-Member -NotePropertyName $propertyName -NotePropertyValue $Language
+        }
+        else {
+            $property.Value = $Language
+        }
     }
 
     $tempJson = $settingsObject | ConvertTo-Json -Depth 30
@@ -120,8 +122,28 @@ function Set-MatrixVoiceLanguage {
         $tempJson,
         [System.Text.UTF8Encoding]::new($false))
 
+    # QA14-R5 hard gate: a suite is never allowed to launch with an English
+    # recognizer over a Spanish UI (or the inverse). Both values must match the
+    # suite language before the app is launched by the child wrapper.
+    $verify = [System.IO.File]::ReadAllText($uiSettingsPath) | ConvertFrom-Json
+    if (-not [string]::Equals(
+            [string]$verify.ApplicationLanguage,
+            $Language,
+            [System.StringComparison]::OrdinalIgnoreCase) -or
+        -not [string]::Equals(
+            [string]$verify.VoiceRecognitionLanguage,
+            $Language,
+            [System.StringComparison]::OrdinalIgnoreCase))
+    {
+        throw (
+            "QA14-R5 language isolation gate failed. ApplicationLanguage='{0}', VoiceRecognitionLanguage='{1}', expected='{2}'." -f
+            [string]$verify.ApplicationLanguage,
+            [string]$verify.VoiceRecognitionLanguage,
+            $Language)
+    }
+
     Write-MatrixLog (
-        "[QA14-R2] VoiceRecognitionLanguage temporarily set to {0}; ApplicationLanguage/user settings otherwise preserved." -f
+        "[QA14-R5] ApplicationLanguage + VoiceRecognitionLanguage temporarily set to {0}." -f
         $Language) "Yellow"
 }
 
@@ -256,15 +278,15 @@ function Try-Copy-ZipEvidenceEntry {
 
 New-Item -ItemType Directory -Path $downloads -Force | Out-Null
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
-"SimVoice Copilot 1.0.20.0 Release Candidate Matrix QA14-R2" |
+"SimVoice Copilot 1.0.20.0 Release Candidate Matrix QA14-R5" |
     Set-Content -LiteralPath $matrixLog -Encoding UTF8
 
 $matrixExitCode = 1
 
 try {
-    Write-MatrixLog "SimVoice Copilot 1.0.20.0 — FINAL AUTOMATED RELEASE MATRIX QA14-R2" "Cyan"
-    Write-MatrixLog "Product baseline expected: HF36-R30" "White"
-    Write-MatrixLog "Matrix is bilingual/self-contained: it temporarily switches VoiceRecognitionLanguage EN -> ES." "White"
+    Write-MatrixLog "SimVoice Copilot 1.0.20.0 — FINAL AUTOMATED RELEASE MATRIX QA14-R5" "Cyan"
+    Write-MatrixLog "Product baseline expected: HF36-R47" "White"
+    Write-MatrixLog "Matrix is bilingual/self-contained: ApplicationLanguage + VoiceRecognitionLanguage are isolated together EN -> ES." "White"
     Write-MatrixLog ("Expected total cases: {0}" -f $ExpectedTotalCases) "White"
     Write-MatrixLog ""
 
@@ -278,13 +300,13 @@ try {
         throw "QA catalog guard mismatch."
     }
     if ((Get-Sha256 $runnerPath) -ne $ExpectedRunnerSha) {
-        throw "QA13-R1 runner guard mismatch."
+        throw "QA14-R5 runner guard mismatch."
     }
     if ((Get-Sha256 $wrapperPath) -ne $ExpectedWrapperSha) {
         throw "Automated wrapper guard mismatch."
     }
 
-    Write-MatrixLog "[PASS] exact QA catalog / QA13-R1 runner / wrapper guards." "Green"
+    Write-MatrixLog "[PASS] exact QA catalog / QA14-R5 runner / wrapper guards." "Green"
 
     $catalogObject = Get-Content -LiteralPath $catalogPath -Raw -Encoding UTF8 | ConvertFrom-Json
     foreach ($spec in $Suites) {
@@ -301,15 +323,18 @@ try {
 
     Save-OriginalUiSettings
 
+    $globalCaseOffset = 0
     foreach ($spec in $Suites) {
         Write-MatrixLog ""
         Write-MatrixLog "============================================================" "DarkCyan"
+        $globalStart = $globalCaseOffset + 1
+        $globalEnd = $globalCaseOffset + [int]$spec.Expected
         Write-MatrixLog (
-            "RUN SUITE: {0} | language={1} | expected={2} | MaxAttempts={3}" -f
-            $spec.Name,$spec.Language,$spec.Expected,$spec.MaxAttempts) "Cyan"
+            "RUN SUITE: {0} | language={1} | expected={2} | MaxAttempts={3} | TOTAL range={4}-{5}/{6}" -f
+            $spec.Name,$spec.Language,$spec.Expected,$spec.MaxAttempts,$globalStart,$globalEnd,$ExpectedTotalCases) "Cyan"
         Write-MatrixLog "============================================================" "DarkCyan"
 
-        Set-MatrixVoiceLanguage -Language ([string]$spec.Language)
+        Set-MatrixSuiteLanguage -Language ([string]$spec.Language)
 
         $suiteStart = Get-Date
         [string[]]$childArgs = @(
@@ -318,6 +343,8 @@ try {
             "-File", $wrapperPath,
             "-Suite", [string]$spec.Name,
             "-MaxAttempts", [string]$spec.MaxAttempts,
+            "-GlobalCaseOffset", [string]$globalCaseOffset,
+            "-GlobalCaseTotal", [string]$ExpectedTotalCases,
             "-ContinueAfterFailure"
         )
 
@@ -333,6 +360,8 @@ try {
         $record = [ordered]@{
             Suite = [string]$spec.Name
             Language = [string]$spec.Language
+            ApplicationLanguage = [string]$spec.Language
+            VoiceRecognitionLanguage = [string]$spec.Language
             ExpectedCases = [int]$spec.Expected
             RequiredMaxAttempts = [int]$spec.MaxAttempts
             ChildExitCode = [int]$childCode
@@ -440,6 +469,7 @@ try {
         }
 
         $script:results += [pscustomobject]$record
+        $globalCaseOffset += [int]$spec.Expected
     }
 }
 catch {
@@ -491,8 +521,8 @@ finally {
     $matrixObject = [ordered]@{
         SchemaVersion = 2
         Version = "1.0.20.0"
-        ProductBaseline = "HF36-R30"
-        MatrixRevision = "QA14-R2"
+        ProductBaseline = "HF36-R47"
+        MatrixRevision = "QA14-R5"
         StartedAtLocal = $runStart.ToString("o")
         FinishedAtLocal = (Get-Date).ToString("o")
         ExpectedTotalCases = $ExpectedTotalCases
@@ -514,7 +544,7 @@ finally {
     [string[]]$textLines = @(
         "SimVoice Copilot 1.0.20.0 — FINAL AUTOMATED RELEASE MATRIX",
         "Product baseline : HF36-R30",
-        "Matrix revision  : QA14-R2",
+        "Matrix revision  : QA14-R5",
         ("Started          : " + $matrixObject.StartedAtLocal),
         ("Finished         : " + $matrixObject.FinishedAtLocal),
         ("Suites           : {0}/{1}" -f $matrixObject.ExecutedSuiteCount,$matrixObject.SuiteCount),

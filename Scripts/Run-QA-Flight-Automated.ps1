@@ -12,6 +12,13 @@ param(
     [switch]$ContinueAfterFailure,
     [switch]$NoBuild,
 
+    # QA14-R5 matrix-wide progress context.
+    [ValidateRange(0, 10000)]
+    [int]$GlobalCaseOffset = 0,
+
+    [ValidateRange(0, 10000)]
+    [int]$GlobalCaseTotal = 0,
+
     [string]$ProcessName = "SimVoiceCopilotApp"
 )
 
@@ -279,6 +286,8 @@ try {
         "-Suite", $Suite,
         "-OutputDirectory", $outputDirectory,
         "-MaxAttempts", [string]$MaxAttempts,
+        "-GlobalCaseOffset", [string]$GlobalCaseOffset,
+        "-GlobalCaseTotal", [string]$GlobalCaseTotal,
         "-CloseAppAtEnd"
     )
 
