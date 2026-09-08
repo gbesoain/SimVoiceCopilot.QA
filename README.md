@@ -1,6 +1,6 @@
-﻿# SimVoiceCopilot.QA Final Regression v2.7.5
+﻿# SimVoiceCopilot.QA Final Regression v2.8.0
 
-Suite específica para SimVoice Copilot 1.0.17.0, compilada para `.NET Framework 4.8 / x64`.
+Suite de certificación para SimVoice Copilot 1.1.0.0, compilada para `.NET Framework 4.8 / x64`.
 
 ## Ejecución focalizada
 
@@ -67,3 +67,12 @@ El proyecto principal excluye:
 - Mantiene las confirmaciones configurables y todas las regresiones anteriores.
 - La inyección secuencial privada omite el gate VAD solamente durante `SIMVOICE_QA_INTERNAL_AUDIO`.
 - El runner se detiene por defecto en el primer caso fallido; use `-ContinueAfterFailure` para una matriz completa.
+
+
+## v2.8.0 — 1.1.0.0 lifecycle rebase
+
+- UI regression uses `Run-QA-MSIX.ps1 -FreshStart` and owns the app lifecycle.
+- Internal Audio bootstrap instances are never reused by the UI Automation stage.
+- `WaitForMainWindow` rejects unmatched helper/offscreen windows.
+- Oracle flight-state preconditions fail fast before command regression.
+- Final summaries identify app 1.1.0.0 and QA 2.8.0.

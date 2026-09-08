@@ -1,0 +1,13 @@
+SimVoice Copilot 1.1.0.0
+
+- Se agregó acceso Free permanente y soporte de entitlements Premium Monthly/Lifetime.
+- Se agregó Natural Command Resolver y AI Command Builder exclusivo de Premium.
+- Se agregaron grupos de comandos AI de fábrica curados en inglés y español para nuevos perfiles default.
+- Se agregó OpenAI Neural Voice para respuestas habladas Premium con streaming y fallback determinístico a System Voice.
+- Se agregó caché L1 en memoria, L2 en disco local y caché Neural Voice en servidor. Las respuestas desde caché consumen 0 minutos.
+- Se agregó saldo Neural Voice transparente: Premium Monthly incluye 120 minutos generados por ciclo de facturación; Premium Lifetime incluye un saldo inicial de 300 minutos generados sin vencimiento.
+- Se agregó saldo/estado Neural Voice a Voice Settings y al EFB dentro del simulador.
+- Se mejoró la estabilidad de audio Neural Voice live mediante alineación PCM y buffer anti-jitter de 300 ms.
+- Se mejoró la integración checklist/EFB manteniendo protegido el transporte WASM relay certificado.
+
+- Elige entre 13 voces integradas de OpenAI Neural Voice, con vistas previas gratuitas en caché que no consumen tu saldo de voz.

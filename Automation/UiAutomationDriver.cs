@@ -42,9 +42,17 @@ namespace SimVoiceCopilot.QA.Automation
                     AutomationElement candidate = null;
                     if (process.MainWindowHandle != IntPtr.Zero)
                     {
-                        candidate = AutomationElement.FromHandle(process.MainWindowHandle);
+                        AutomationElement byHandle = AutomationElement.FromHandle(process.MainWindowHandle);
+                        if (byHandle != null && Matches(byHandle, selector))
+                        {
+                            candidate = byHandle;
+                        }
                     }
 
+                    // WinForms can expose an unnamed/offscreen helper window as
+                    // Process.MainWindowHandle while MainForm is still initializing.
+                    // Reject helper windows that do not match the configured MainWindow
+                    // selector instead of producing a false startup PASS.
                     if (candidate == null)
                     {
                         candidate = FindTopLevelWindowByProcessId(process.Id, selector);
@@ -53,7 +61,7 @@ namespace SimVoiceCopilot.QA.Automation
                     if (candidate != null)
                     {
                         mainWindow = candidate;
-                        logger.Info("Main window found: " + SafeName(mainWindow));
+                        logger.Info("Main window found: " + Describe(mainWindow));
                         return mainWindow;
                     }
                 }
@@ -66,8 +74,9 @@ namespace SimVoiceCopilot.QA.Automation
             }
 
             throw new TimeoutException(
-                "The main window was not found within " + timeout.TotalSeconds.ToString("0") +
-                " seconds. Last error: " + (lastException == null ? "none" : lastException.Message));
+                "The configured main window was not found within " + timeout.TotalSeconds.ToString("0") +
+                " seconds. Helper/offscreen windows that did not match MainWindow were rejected. Last error: " +
+                (lastException == null ? "none" : lastException.Message));
         }
 
         public AutomationElement FindElement(UiSelectorConfiguration selector, TimeSpan timeout)
@@ -535,30 +544,76 @@ namespace SimVoiceCopilot.QA.Automation
             return !NativeMethods.IsWindow(windowHandle) || !NativeMethods.IsWindowVisible(windowHandle);
         }
 
+        // SIMVOICE_QA_HF36_R14_MSIX_UIREADY_V3
         private void WaitForMainWindowEnabled(TimeSpan timeout)
         {
-            int rawMainHandle = SafeInt(delegate { return mainWindow.Current.NativeWindowHandle; });
-            IntPtr mainHandle = new IntPtr(rawMainHandle);
-            if (mainHandle == IntPtr.Zero)
-            {
-                return;
-            }
-
             DateTime deadline = DateTime.Now.Add(timeout);
+
             while (DateTime.Now < deadline)
             {
-                if (NativeMethods.IsWindow(mainHandle) && NativeMethods.IsWindowEnabled(mainHandle))
+                process.Refresh();
+                if (process.HasExited)
                 {
-                    NativeMethods.ShowWindowAsync(mainHandle, NativeMethods.SwRestore);
-                    NativeMethods.SetForegroundWindow(mainHandle);
+                    throw new InvalidOperationException(
+                        "The application exited while waiting for the main window to be re-enabled.");
+                }
+
+                IntPtr candidate = process.MainWindowHandle;
+                if (candidate != IntPtr.Zero &&
+                    NativeMethods.IsWindow(candidate) &&
+                    NativeMethods.IsWindowVisible(candidate) &&
+                    NativeMethods.IsWindowEnabled(candidate))
+                {
+                    try
+                    {
+                        AutomationElement refreshed = AutomationElement.FromHandle(candidate);
+                        if (refreshed != null)
+                        {
+                            mainWindow = refreshed;
+                        }
+                    }
+                    catch
+                    {
+                    }
+
+                    NativeMethods.ShowWindowAsync(candidate, NativeMethods.SwRestore);
+                    NativeMethods.SetForegroundWindow(candidate);
+                    return;
+                }
+
+                foreach (IntPtr handle in FindVisibleProcessWindowHandles())
+                {
+                    if (!NativeMethods.IsWindow(handle) ||
+                        !NativeMethods.IsWindowVisible(handle) ||
+                        !NativeMethods.IsWindowEnabled(handle))
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        AutomationElement refreshed = AutomationElement.FromHandle(handle);
+                        if (refreshed != null)
+                        {
+                            mainWindow = refreshed;
+                        }
+                    }
+                    catch
+                    {
+                    }
+
+                    NativeMethods.ShowWindowAsync(handle, NativeMethods.SwRestore);
+                    NativeMethods.SetForegroundWindow(handle);
                     return;
                 }
 
                 Thread.Sleep(100);
             }
 
-            throw new TimeoutException("The main window did not become enabled after closing the modal window.");
+            throw new TimeoutException(
+                "No visible enabled main window belonging to the application became available after closing the modal window.");
         }
+
 
         private bool TryNativeClick(AutomationElement element)
         {
@@ -802,7 +857,8 @@ namespace SimVoiceCopilot.QA.Automation
                 }
             }
 
-            return windows.Count > 0 ? windows[0] : null;
+            // Never fall back to an arbitrary helper/message window.
+            return null;
         }
 
         private AutomationElement FindElementAcrossProcess(UiSelectorConfiguration selector)

@@ -28,7 +28,7 @@ namespace SimVoiceCopilot.QA.SimConnectOracle.Reporting
         private static void WriteCsv(OracleReport report, string path)
         {
             StringBuilder text = new StringBuilder();
-            text.AppendLine("TimestampLocal,FlightActive,DialogMode,AircraftTitle,AtcModel,OnGround,PlaneAltitudeFeet,IndicatedAltitudeFeet,PlaneHeadingDegrees,HeadingBugDegrees,SelectedAltitudeFeet,SelectedVerticalSpeedFpm,TransponderCode,AutopilotAvailable,AutopilotMaster,HeadingHold,AltitudeHold,VerticalSpeedHold,ParkingBrake,GearHandlePosition,FlapsHandleIndex,FuelGallons,WindDirectionDegrees,WindSpeedKnots,GroundSpeedKnots,SimulationRate");
+            text.AppendLine("TimestampLocal,FlightActive,DialogMode,AircraftTitle,AtcModel,OnGround,PlaneAltitudeFeet,IndicatedAltitudeFeet,PlaneHeadingDegrees,HeadingBugDegrees,SelectedAltitudeFeet,SelectedVerticalSpeedFpm,Com1ActiveMHz,Com1StandbyMHz,Com2ActiveMHz,Com2StandbyMHz,Nav1ActiveMHz,Nav1StandbyMHz,Nav2ActiveMHz,Nav2StandbyMHz,TransponderCode,AutopilotAvailable,AutopilotMaster,HeadingHold,AltitudeHold,VerticalSpeedHold,ParkingBrake,GearHandlePosition,FlapsHandleIndex,FuelGallons,WindDirectionDegrees,WindSpeedKnots,GroundSpeedKnots,SimulationRate");
 
             foreach (OracleSnapshot item in report.Snapshots)
             {
@@ -44,6 +44,14 @@ namespace SimVoiceCopilot.QA.SimConnectOracle.Reporting
                     .Append(Number(item.HeadingBugDegrees)).Append(',')
                     .Append(Number(item.SelectedAltitudeFeet)).Append(',')
                     .Append(Number(item.SelectedVerticalSpeedFpm)).Append(',')
+                    .Append(Number(item.Com1ActiveFrequencyMHz)).Append(',')
+                    .Append(Number(item.Com1StandbyFrequencyMHz)).Append(',')
+                    .Append(Number(item.Com2ActiveFrequencyMHz)).Append(',')
+                    .Append(Number(item.Com2StandbyFrequencyMHz)).Append(',')
+                    .Append(Number(item.Nav1ActiveFrequencyMHz)).Append(',')
+                    .Append(Number(item.Nav1StandbyFrequencyMHz)).Append(',')
+                    .Append(Number(item.Nav2ActiveFrequencyMHz)).Append(',')
+                    .Append(Number(item.Nav2StandbyFrequencyMHz)).Append(',')
                     .Append(item.TransponderCode.ToString("0000", CultureInfo.InvariantCulture)).Append(',')
                     .Append(Bool(item.AutopilotAvailable)).Append(',')
                     .Append(Bool(item.AutopilotMaster)).Append(',')

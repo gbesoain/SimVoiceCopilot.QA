@@ -24,8 +24,17 @@ namespace SimVoiceCopilot.QA.SimConnectOracle.Oracle
         public double AutopilotHeadingLockDirDegrees;
         public double AutopilotAltitudeLock;
         public double AutopilotAltitudeLockVarFeet;
+        public double AutopilotAirspeedHoldVarKnots;
         public double AutopilotVerticalHold;
         public double AutopilotVerticalHoldVarFpm;
+        public double Com1ActiveFrequencyMHz;
+        public double Com1StandbyFrequencyMHz;
+        public double Com2ActiveFrequencyMHz;
+        public double Com2StandbyFrequencyMHz;
+        public double Nav1ActiveFrequencyMHz;
+        public double Nav1StandbyFrequencyMHz;
+        public double Nav2ActiveFrequencyMHz;
+        public double Nav2StandbyFrequencyMHz;
         public uint TransponderCodeBcd16;
         public double ParkingBrake;
         public double GearHandlePosition;
@@ -74,8 +83,17 @@ namespace SimVoiceCopilot.QA.SimConnectOracle.Oracle
         public double HeadingBugDegrees { get; set; }
         public bool AltitudeHold { get; set; }
         public double SelectedAltitudeFeet { get; set; }
+        public double SelectedAirspeedKnots { get; set; }
         public bool VerticalSpeedHold { get; set; }
         public double SelectedVerticalSpeedFpm { get; set; }
+        public double Com1ActiveFrequencyMHz { get; set; }
+        public double Com1StandbyFrequencyMHz { get; set; }
+        public double Com2ActiveFrequencyMHz { get; set; }
+        public double Com2StandbyFrequencyMHz { get; set; }
+        public double Nav1ActiveFrequencyMHz { get; set; }
+        public double Nav1StandbyFrequencyMHz { get; set; }
+        public double Nav2ActiveFrequencyMHz { get; set; }
+        public double Nav2StandbyFrequencyMHz { get; set; }
         public uint TransponderRawBcd16 { get; set; }
         public int TransponderCode { get; set; }
         public bool ParkingBrake { get; set; }
@@ -129,8 +147,17 @@ namespace SimVoiceCopilot.QA.SimConnectOracle.Oracle
                 HeadingBugDegrees = NormalizeHeading(data.AutopilotHeadingLockDirDegrees),
                 AltitudeHold = ToBool(data.AutopilotAltitudeLock),
                 SelectedAltitudeFeet = data.AutopilotAltitudeLockVarFeet,
+                SelectedAirspeedKnots = data.AutopilotAirspeedHoldVarKnots,
                 VerticalSpeedHold = ToBool(data.AutopilotVerticalHold),
                 SelectedVerticalSpeedFpm = data.AutopilotVerticalHoldVarFpm,
+                Com1ActiveFrequencyMHz = data.Com1ActiveFrequencyMHz,
+                Com1StandbyFrequencyMHz = data.Com1StandbyFrequencyMHz,
+                Com2ActiveFrequencyMHz = data.Com2ActiveFrequencyMHz,
+                Com2StandbyFrequencyMHz = data.Com2StandbyFrequencyMHz,
+                Nav1ActiveFrequencyMHz = data.Nav1ActiveFrequencyMHz,
+                Nav1StandbyFrequencyMHz = data.Nav1StandbyFrequencyMHz,
+                Nav2ActiveFrequencyMHz = data.Nav2ActiveFrequencyMHz,
+                Nav2StandbyFrequencyMHz = data.Nav2StandbyFrequencyMHz,
                 TransponderRawBcd16 = data.TransponderCodeBcd16,
                 TransponderCode = DecodeBcd16(data.TransponderCodeBcd16),
                 ParkingBrake = ToBool(data.ParkingBrake),
@@ -182,8 +209,17 @@ namespace SimVoiceCopilot.QA.SimConnectOracle.Oracle
                 { "HeadingBug", HeadingBugDegrees },
                 { "AltitudeHold", AltitudeHold },
                 { "SelectedAltitude", SelectedAltitudeFeet },
+                { "SelectedAirspeed", SelectedAirspeedKnots },
                 { "VerticalSpeedHold", VerticalSpeedHold },
                 { "SelectedVerticalSpeed", SelectedVerticalSpeedFpm },
+                { "Com1Active", Com1ActiveFrequencyMHz },
+                { "Com1Standby", Com1StandbyFrequencyMHz },
+                { "Com2Active", Com2ActiveFrequencyMHz },
+                { "Com2Standby", Com2StandbyFrequencyMHz },
+                { "Nav1Active", Nav1ActiveFrequencyMHz },
+                { "Nav1Standby", Nav1StandbyFrequencyMHz },
+                { "Nav2Active", Nav2ActiveFrequencyMHz },
+                { "Nav2Standby", Nav2StandbyFrequencyMHz },
                 { "Transponder", TransponderCode },
                 { "TransponderRawBcd16", TransponderRawBcd16 },
                 { "ParkingBrake", ParkingBrake },
@@ -228,7 +264,12 @@ namespace SimVoiceCopilot.QA.SimConnectOracle.Oracle
                 "Plane heading      : " + PlaneHeadingMagneticDegrees.ToString("F1", CultureInfo.InvariantCulture) + " deg",
                 "Heading bug        : " + HeadingBugDegrees.ToString("F1", CultureInfo.InvariantCulture) + " deg",
                 "Selected altitude  : " + SelectedAltitudeFeet.ToString("F1", CultureInfo.InvariantCulture) + " ft",
+                "Selected airspeed  : " + SelectedAirspeedKnots.ToString("F1", CultureInfo.InvariantCulture) + " kt",
                 "Selected VS        : " + SelectedVerticalSpeedFpm.ToString("F1", CultureInfo.InvariantCulture) + " ft/min",
+                "COM1 active/standby: " + Com1ActiveFrequencyMHz.ToString("F3", CultureInfo.InvariantCulture) + " / " + Com1StandbyFrequencyMHz.ToString("F3", CultureInfo.InvariantCulture) + " MHz",
+                "COM2 active/standby: " + Com2ActiveFrequencyMHz.ToString("F3", CultureInfo.InvariantCulture) + " / " + Com2StandbyFrequencyMHz.ToString("F3", CultureInfo.InvariantCulture) + " MHz",
+                "NAV1 active/standby: " + Nav1ActiveFrequencyMHz.ToString("F3", CultureInfo.InvariantCulture) + " / " + Nav1StandbyFrequencyMHz.ToString("F3", CultureInfo.InvariantCulture) + " MHz",
+                "NAV2 active/standby: " + Nav2ActiveFrequencyMHz.ToString("F3", CultureInfo.InvariantCulture) + " / " + Nav2StandbyFrequencyMHz.ToString("F3", CultureInfo.InvariantCulture) + " MHz",
                 "Transponder        : " + TransponderCode.ToString("0000", CultureInfo.InvariantCulture),
                 "Autopilot available: " + AutopilotAvailable,
                 "Autopilot master   : " + AutopilotMaster,

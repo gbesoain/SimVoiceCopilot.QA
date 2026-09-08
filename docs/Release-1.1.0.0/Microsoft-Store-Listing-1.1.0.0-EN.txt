@@ -1,0 +1,32 @@
+SIMVOICE COPILOT 1.1
+
+Voice-first cockpit control for Microsoft Flight Simulator 2024, with a permanent Free tier and expanded Premium automation.
+
+WHAT YOU CAN DO
+- Execute supported simulator and keyboard commands by voice.
+- Use guided aircraft checklists from Windows and the in-sim EFB.
+- Create spoken SimVar call-outs.
+- Use Natural Command Resolver and AI Command Builder to combine multiple actions into reusable command groups.
+- Use OpenAI Neural Voice for Premium spoken feedback, with streaming, local/server caching and automatic System Voice fallback.
+
+FREE
+- Permanent Free access.
+- Complete C172 G1000 checklist experience.
+- Up to 10 voice commands, 5 keyboard commands and 5 call-outs.
+
+PREMIUM MONTHLY
+- Full Premium feature set.
+- 120 minutes of newly generated Neural Voice audio per billing cycle.
+- Cached Neural Voice playback uses 0 minutes.
+
+PREMIUM LIFETIME
+- One-time purchase for Lifetime Premium software access.
+- Initial 300 Neural Voice generation minutes with no expiration.
+- Cached Neural Voice playback uses 0 minutes.
+
+NEURAL VOICE TRANSPARENCY
+Your balance is reduced only when OpenAI generates new audio. Responses served from memory, local disk or server cache cost 0 voice minutes. If Neural Voice is unavailable or the balance is exhausted, SimVoice Copilot automatically continues with System Voice.
+
+Microsoft Flight Simulator and aircraft names are trademarks of their respective owners. SimVoice Copilot is an independent SimTech Aviation product.
+
+- Choose from 13 built-in OpenAI Neural Voice options, with free cached voice previews that do not use your voice balance.

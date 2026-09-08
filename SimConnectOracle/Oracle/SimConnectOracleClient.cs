@@ -125,8 +125,23 @@ namespace SimVoiceCopilot.QA.SimConnectOracle.Oracle
             AddFloat64("AUTOPILOT HEADING LOCK DIR", "degrees");
             AddFloat64("AUTOPILOT ALTITUDE LOCK", "Bool");
             AddFloat64("AUTOPILOT ALTITUDE LOCK VAR", "feet");
+            // HF36-R20 QA7: target selected speed for AP_SPD_VAR_SET verification.
+            AddFloat64("AUTOPILOT AIRSPEED HOLD VAR", "knots");
             AddFloat64("AUTOPILOT VERTICAL HOLD", "Bool");
             AddFloat64("AUTOPILOT VERTICAL HOLD VAR", "feet per minute");
+
+            // HF36-R14 functional gate: independent radio truth from MSFS.
+            // Request MHz so the Oracle compares the human-visible frequency
+            // rather than any BCD/event encoding used internally.
+            AddFloat64("COM ACTIVE FREQUENCY:1", "MHz");
+            AddFloat64("COM STANDBY FREQUENCY:1", "MHz");
+            AddFloat64("COM ACTIVE FREQUENCY:2", "MHz");
+            AddFloat64("COM STANDBY FREQUENCY:2", "MHz");
+            AddFloat64("NAV ACTIVE FREQUENCY:1", "MHz");
+            AddFloat64("NAV STANDBY FREQUENCY:1", "MHz");
+            AddFloat64("NAV ACTIVE FREQUENCY:2", "MHz");
+            AddFloat64("NAV STANDBY FREQUENCY:2", "MHz");
+
             simConnect.AddToDataDefinition(DataDefinitions.FlightState, "TRANSPONDER CODE:1", "BCO16", SIMCONNECT_DATATYPE.INT32, 0, SimConnect.SIMCONNECT_UNUSED);
             AddFloat64("BRAKE PARKING POSITION", "Bool");
             AddFloat64("GEAR HANDLE POSITION", "percent over 100");

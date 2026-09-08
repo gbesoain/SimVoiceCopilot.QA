@@ -1,0 +1,32 @@
+SIMVOICE COPILOT 1.1
+
+Control de cabina orientado a voz para Microsoft Flight Simulator 2024, con nivel Free permanente y automatización Premium ampliada.
+
+QUÉ PUEDES HACER
+- Ejecutar por voz comandos compatibles del simulador y teclado.
+- Usar listas de verificación guiadas desde Windows y el EFB dentro del simulador.
+- Crear call-outs hablados basados en SimVars.
+- Usar Natural Command Resolver y AI Command Builder para combinar múltiples acciones en grupos de comandos reutilizables.
+- Usar OpenAI Neural Voice para respuestas habladas Premium, con streaming, caché local/servidor y fallback automático a System Voice.
+
+FREE
+- Acceso Free permanente.
+- Experiencia completa de checklist C172 G1000.
+- Hasta 10 comandos de voz, 5 comandos de teclado y 5 call-outs.
+
+PREMIUM MONTHLY
+- Conjunto completo de funciones Premium.
+- 120 minutos de audio Neural Voice nuevo por ciclo de facturación.
+- La reproducción Neural Voice desde caché consume 0 minutos.
+
+PREMIUM LIFETIME
+- Pago único para acceso Premium Lifetime al software.
+- Saldo inicial de 300 minutos de generación Neural Voice sin vencimiento.
+- La reproducción Neural Voice desde caché consume 0 minutos.
+
+TRANSPARENCIA DE NEURAL VOICE
+El saldo sólo disminuye cuando OpenAI genera audio nuevo. Las respuestas servidas desde memoria, disco local o caché del servidor consumen 0 minutos. Si Neural Voice no está disponible o el saldo se agota, SimVoice Copilot continúa automáticamente con System Voice.
+
+Microsoft Flight Simulator y los nombres de aeronaves son marcas de sus respectivos propietarios. SimVoice Copilot es un producto independiente de SimTech Aviation.
+
+- Elige entre 13 voces integradas de OpenAI Neural Voice, con vistas previas gratuitas en caché que no consumen tu saldo de voz.
