@@ -359,9 +359,9 @@ function Save-PhaseSummary {
     $stepArray = @($Steps | ForEach-Object { $_ })
     $success = (@($stepArray | Where-Object { -not [bool]$_.success }).Count -eq 0)
     $summary = [ordered]@{
-        schemaVersion = 1
-        qaVersion = "2.7.5"
-        appVersion = "1.0.17.0"
+        schemaVersion = 2
+        qaVersion = ((Get-Content -LiteralPath (Join-Path $projectRoot "VERSION.txt") -TotalCount 1 -ErrorAction SilentlyContinue) | Select-Object -First 1)
+        appVersion = "1.1.0.0"
         phase = $PhaseName
         generatedAt = (Get-Date).ToString("o")
         success = $success
@@ -442,6 +442,35 @@ function Invoke-LanguagePhase {
         throw "The active aircraft is '$aircraftTitle'. This deterministic phase requires an aircraft matching '$StandardAircraftPattern' (recommended: C172 G1000)."
     }
 
+    $flightPreconditionStarted = Get-Date
+    $preconditionErrors = New-Object 'System.Collections.Generic.List[string]'
+    if (-not [bool]$snapshot.FlightActive) { $preconditionErrors.Add("FlightActive is false") }
+    if ([bool]$snapshot.OnGround) { $preconditionErrors.Add("aircraft is on the ground") }
+    if ([double]$snapshot.FlapsHandleIndex -gt 0.01) { $preconditionErrors.Add("flaps are not UP (index=$($snapshot.FlapsHandleIndex))") }
+    if ([bool]$snapshot.AutopilotMaster) { $preconditionErrors.Add("autopilot master is ON") }
+    $flightPreconditionFinished = Get-Date
+    $flightPreconditionPassed = ($preconditionErrors.Count -eq 0)
+    $flightPreconditionStep = [pscustomobject][ordered]@{
+        name = "Flight-state preconditions"
+        script = "Run-QA-SimConnect-Oracle.ps1 / snapshot gate"
+        outputDirectory = $probeDirectory
+        startedAt = $flightPreconditionStarted.ToString("o")
+        finishedAt = $flightPreconditionFinished.ToString("o")
+        durationSeconds = [Math]::Round(($flightPreconditionFinished - $flightPreconditionStarted).TotalSeconds, 3)
+        exitCode = if ($flightPreconditionPassed) { 0 } else { 1 }
+        success = $flightPreconditionPassed
+        timedOut = $false
+        stdout = $null
+        stderr = if ($flightPreconditionPassed) { $null } else { ($preconditionErrors -join "; ") }
+    }
+    $steps.Add($flightPreconditionStep)
+    if (-not $flightPreconditionPassed) {
+        Write-Host ("STEP FAILED: Flight-state preconditions: {0}" -f ($preconditionErrors -join "; ")) -ForegroundColor Red
+        Write-Host "Prepare the C172 airborne, flaps UP, autopilot OFF, then rerun the phase." -ForegroundColor Yellow
+        return (Finalize-LanguageFailure -LanguagePhase $LanguagePhase -RunDirectory $runDirectory -Steps $steps -VoiceLanguage $voiceLanguage -AircraftTitle $aircraftTitle)
+    }
+    Write-Host "STEP PASS: Flight-state preconditions" -ForegroundColor Green
+
     $commonFlightArgs = @(
         "-AppNamePattern", $AppNamePattern,
         "-AppIdPattern", $AppIdPattern,
@@ -457,7 +486,7 @@ function Invoke-LanguagePhase {
             "-Scenario", "All",
             "-Cycles", $UiCycles.ToString(),
             "-OutputDirectory", (Join-Path $runDirectory "01-ui-navigation-tray"),
-            "-NoClose"
+            "-FreshStart"
         )
         $step = Invoke-ChildStep -Name "UI, navigation, tray restore and resource regression" -ScriptPath (Join-Path $PSScriptRoot "Run-QA-MSIX.ps1") -Arguments $uiArgs -OutputDirectory (Join-Path $runDirectory "01-ui-console")
         $step = Confirm-StepReportSuccess -Step $step -ReportPath (Join-Path $runDirectory "01-ui-navigation-tray\results.json")

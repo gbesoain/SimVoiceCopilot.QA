@@ -14,6 +14,7 @@ param(
     [string]$OutputDirectory = "",
     [switch]$DiagnoseUi,
     [switch]$NoClose,
+    [switch]$FreshStart,
     [switch]$ListApps
 )
 
@@ -91,6 +92,9 @@ Set-XmlElementText -Document $xml -XPath "/QaConfiguration/Application/LaunchMod
 Set-XmlElementText -Document $xml -XPath "/QaConfiguration/Application/ExecutablePath" -Value ""
 Set-XmlElementText -Document $xml -XPath "/QaConfiguration/Application/PackagedAppId" -Value ([string]$app.AppID)
 Set-XmlElementText -Document $xml -XPath "/QaConfiguration/Application/ProcessName" -Value $ProcessName
+if ($FreshStart) {
+    Set-XmlElementText -Document $xml -XPath "/QaConfiguration/Application/AttachIfRunning" -Value "false"
+}
 Set-XmlElementText -Document $xml -XPath "/QaConfiguration/Execution/MaxWorkingSetGrowthMb" -Value ($MaxWorkingSetGrowthMb.ToString([System.Globalization.CultureInfo]::InvariantCulture))
 
 $scenarioIds = @{
@@ -156,6 +160,22 @@ if ($Scenario -eq "VoiceChecklists") {
 Write-Host "Cycles   : $Cycles" -ForegroundColor DarkGray
 Write-Host "WS limit : $MaxWorkingSetGrowthMb MB" -ForegroundColor DarkGray
 Write-Host "Results  : $OutputDirectory" -ForegroundColor DarkGray
+if ($FreshStart) {
+    Write-Host "Lifecycle: FRESH START - QA owns the UI process lifecycle." -ForegroundColor Yellow
+    $running = @(Get-Process -Name $ProcessName -ErrorAction SilentlyContinue)
+    if ($running.Count -gt 0) {
+        $running | Stop-Process -Force -ErrorAction Stop
+        $deadline = (Get-Date).AddSeconds(15)
+        do {
+            Start-Sleep -Milliseconds 200
+            $remaining = @(Get-Process -Name $ProcessName -ErrorAction SilentlyContinue)
+        } while ($remaining.Count -gt 0 -and (Get-Date) -lt $deadline)
+        if ($remaining.Count -gt 0) {
+            throw "Could not obtain a clean UI QA start. $($remaining.Count) '$ProcessName' process(es) are still running."
+        }
+    }
+    Start-Sleep -Milliseconds 600
+}
 
 $runScript = Join-Path $PSScriptRoot "Run-QA.ps1"
 $params = @{

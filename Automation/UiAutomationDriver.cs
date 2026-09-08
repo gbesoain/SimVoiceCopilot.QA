@@ -42,9 +42,17 @@ namespace SimVoiceCopilot.QA.Automation
                     AutomationElement candidate = null;
                     if (process.MainWindowHandle != IntPtr.Zero)
                     {
-                        candidate = AutomationElement.FromHandle(process.MainWindowHandle);
+                        AutomationElement byHandle = AutomationElement.FromHandle(process.MainWindowHandle);
+                        if (byHandle != null && Matches(byHandle, selector))
+                        {
+                            candidate = byHandle;
+                        }
                     }
 
+                    // WinForms can expose an unnamed/offscreen helper window as
+                    // Process.MainWindowHandle while MainForm is still initializing.
+                    // Reject helper windows that do not match the configured MainWindow
+                    // selector instead of producing a false startup PASS.
                     if (candidate == null)
                     {
                         candidate = FindTopLevelWindowByProcessId(process.Id, selector);
@@ -53,7 +61,7 @@ namespace SimVoiceCopilot.QA.Automation
                     if (candidate != null)
                     {
                         mainWindow = candidate;
-                        logger.Info("Main window found: " + SafeName(mainWindow));
+                        logger.Info("Main window found: " + Describe(mainWindow));
                         return mainWindow;
                     }
                 }
@@ -66,8 +74,9 @@ namespace SimVoiceCopilot.QA.Automation
             }
 
             throw new TimeoutException(
-                "The main window was not found within " + timeout.TotalSeconds.ToString("0") +
-                " seconds. Last error: " + (lastException == null ? "none" : lastException.Message));
+                "The configured main window was not found within " + timeout.TotalSeconds.ToString("0") +
+                " seconds. Helper/offscreen windows that did not match MainWindow were rejected. Last error: " +
+                (lastException == null ? "none" : lastException.Message));
         }
 
         public AutomationElement FindElement(UiSelectorConfiguration selector, TimeSpan timeout)
@@ -848,7 +857,8 @@ namespace SimVoiceCopilot.QA.Automation
                 }
             }
 
-            return windows.Count > 0 ? windows[0] : null;
+            // Never fall back to an arbitrary helper/message window.
+            return null;
         }
 
         private AutomationElement FindElementAcrossProcess(UiSelectorConfiguration selector)

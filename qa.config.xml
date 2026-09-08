@@ -48,7 +48,7 @@
   </VoiceChecklists>
 
   <MainWindow AutomationId="MainForm"
-              Names="SimVoice Copilot 1.0.17.0 - PRO|SimVoice Copilot"
+              Names="SimVoice Copilot 1.1.0.0 - PRO|SimVoice Copilot 1.1.0.0|SimVoice Copilot"
               ControlType="Window" />
 
   <StartupActions>

@@ -1,0 +1,13 @@
+SimVoice Copilot 1.1.0.0
+
+- Added permanent Free and Premium Monthly/Lifetime entitlement support.
+- Added Natural Command Resolver and Premium AI Command Builder.
+- Added curated factory AI Command Groups in English and Spanish for new default profiles.
+- Added OpenAI Neural Voice for Premium spoken feedback with streaming and deterministic System Voice fallback.
+- Added L1 memory, L2 local-disk and server-side Neural Voice caching. Cached responses use 0 voice minutes.
+- Added transparent Neural Voice balances: Premium Monthly includes 120 generated minutes per billing cycle; Premium Lifetime includes an initial 300 non-expiring generated minutes.
+- Added Neural Voice balance/status to Voice Settings and the in-sim EFB.
+- Improved live Neural Voice audio stability with PCM alignment and a 300 ms streaming jitter buffer.
+- Improved checklist/EFB integration and maintained the certified WASM relay transport.
+
+- Choose from 13 built-in OpenAI Neural Voice options, with free cached voice previews that do not use your voice balance.

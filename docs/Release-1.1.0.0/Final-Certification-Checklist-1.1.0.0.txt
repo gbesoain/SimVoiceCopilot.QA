@@ -1,0 +1,61 @@
+SIMVOICE COPILOT 1.1.0.0 — FINAL CERTIFICATION CHECKLIST
+
+Frozen release authorities
+- Windows: 1.1.0.0
+- EFB: 0.1.94
+- WASM Bridge: 1.0.1 (unchanged)
+- R12 WASM Relay: frozen / must not regress
+- Neural Voice audio baseline: PCM Alignment HF1 + Stream Jitter HF2 (300 ms prebuffer)
+- Voice Economics contract: 1.1-VOICE-ECONOMICS-R1
+
+Commercial / backend
+[ ] Commercial Foundation smoke PASS
+[ ] Neural Voice Core smoke PASS
+[ ] Voice Economics smoke PASS
+[ ] Production economics remains enabled and balance endpoint healthy
+[ ] Monthly allowance = 120 generated minutes per billing cycle
+[ ] Lifetime initial balance = 300 generated minutes, non-expiring
+[ ] L1/L2/server cache = zero debit
+[ ] Voice Packs remain deferred/not exposed publicly
+
+Windows / Neural Voice
+[ ] net48 Release x64 build PASS
+[ ] --qa-entitlements-lifetime-r1 PASS
+[ ] --qa-neural-voice-core PASS
+[ ] --qa-release-ux-r2 PASS
+[ ] --qa-aircraft-compatibility PASS
+[ ] Voice Settings shows Neural Voice Premium toggle, 13-voice selector, Preview, balance and allowance copy
+[ ] Voice selector persists the selected built-in voice and changes the cache key
+[ ] Preview is Premium-gated, server-authored, cached and debits 0 customer seconds
+[ ] Fresh generated speech is clean at sentence start
+[ ] Repeated L1/L2/server-cache speech is clean and zero-debit
+[ ] System Voice fallback remains deterministic
+
+EFB / MSFS
+[ ] EFB build/typecheck/package sync PASS
+[ ] EFB version 0.1.94 in package + Windows bundled + Store Runtime
+[ ] WASM remains 1.0.1
+[ ] EFB header shows Neural Voice balance for Premium when available
+[ ] R12 transport/connectivity remains stable
+[ ] Checklist selection/focus/completion regression PASS
+
+AI Command Builder
+[ ] 10+ English factory groups seed only a new commands_default profile
+[ ] 10+ Spanish factory groups seed only a new commands_default profile
+[ ] Existing user CommandGroups are never overwritten
+[ ] Parameterized cruise FL group transforms flight level to feet
+
+Public UX
+[ ] Pricing copy reflects Monthly/Lifetime Neural Voice allowances
+[ ] Upgrade page states cache = 0 minutes and System Voice fallback
+[ ] Manual 1.1 Neural Voice section visible in EN/ES
+[ ] Voice Packs are not advertised
+[ ] Annual→Lifetime customer communication reviewed before sending
+[ ] Microsoft Store EN/ES listing and release notes reviewed
+
+Final packaging
+[ ] DEV MSIX build/sign/install PASS
+[ ] Full interactive final regression PASS
+[ ] One final support package reviewed for crashes/errors/R12/EFB/Neural Voice
+[ ] User manually builds the final Microsoft Store MSIX
+[ ] Final Store package/version/assets inspected before submission

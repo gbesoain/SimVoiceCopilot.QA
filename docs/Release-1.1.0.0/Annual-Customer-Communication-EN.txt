@@ -1,0 +1,19 @@
+Subject: Your SimVoice Copilot Annual plan has been upgraded to Premium Lifetime
+
+Thank you for supporting SimVoice Copilot.
+
+Because you already purchased a paid Annual plan, we have upgraded your SimVoice Copilot account to Premium Lifetime at no additional charge.
+
+What changes for you:
+- Your Premium software access is now Lifetime and does not expire.
+- Your previous Annual renewal has been disabled; no action is required from you.
+- You keep all Premium features available to your account.
+- Premium Lifetime includes an initial 300 minutes of OpenAI Neural Voice generation with no expiration.
+- Cached Neural Voice responses use 0 minutes, so only newly generated OpenAI audio reduces your voice balance.
+- If Neural Voice is unavailable or your balance is exhausted, SimVoice Copilot automatically uses System Voice.
+
+You do not need to reinstall or repurchase anything because of this account migration.
+
+Thank you,
+SimTech Aviation
+SimVoice Copilot
